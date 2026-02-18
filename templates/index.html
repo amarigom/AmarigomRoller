@@ -1,0 +1,990 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero" id="home">
+    <div class="hero-background"></div>
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+        <h1 class="hero-title">{{ translations[lang]['hero_title'] }}</h1>
+        <p class="hero-subtitle">{{ translations[lang]['hero_subtitle'] }}</p>
+        <div class="hero-actions">
+            <a href="#quote" class="btn btn-primary">{{ translations[lang]['hero_cta'] }}</a>
+            <a href="#products" class="btn btn-outline">{{ translations[lang]['hero_cta_products'] }}</a>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section class="about" id="about">
+    <div class="container">
+        <div class="about-content">
+            <div class="about-text">
+                <h2>AMARIGOM DECO</h2>
+                <p>{% if lang == 'es' %}
+                    Somos especialistas en cortinas roller sunscreen, blackout y cortinas tradicionales. 
+                    Con años de experiencia, transformamos espacios con elegancia y funcionalidad.
+                    Cada proyecto es único y trabajamos con materiales de la más alta calidad para 
+                    garantizar durabilidad y belleza en cada instalación.
+                {% else %}
+                    We are specialists in sunscreen roller blinds, blackout blinds and traditional curtains.
+                    With years of experience, we transform spaces with elegance and functionality.
+                    Each project is unique and we work with the highest quality materials to
+                    guarantee durability and beauty in every installation.
+                {% endif %}</p>
+            </div>
+            <div class="about-image">
+                <img src="{{ url_for('static', filename='images/hero-bg.jpg') }}" alt="AMARIGOM DECO">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Products Section -->
+<section class="products" id="products">
+    <div class="container">
+        <div class="section-header">
+            <h2>{{ translations[lang]['products_title'] }}</h2>
+            <p>{{ translations[lang]['products_subtitle'] }}</p>
+        </div>
+        
+        <div class="products-grid">
+            <!-- Sunscreen Product -->
+            <div class="product-card">
+                <div class="product-image">
+                    <img src="{{ url_for('static', filename='images/products/sunscreen.jpg') }}" 
+                         alt="{{ translations[lang]['product_sunscreen'] }}">
+                    <div class="product-badge">Sunscreen</div>
+                </div>
+                <div class="product-info">
+                    <h3>{{ translations[lang]['product_sunscreen'] }}</h3>
+                    <p>{{ translations[lang]['product_sunscreen_desc'] }}</p>
+                    <div class="product-price">Desde $15.000</div>
+                    <div class="product-actions">
+                        <button class="btn btn-primary" 
+                                onclick="addToCart(1, '{{ translations[lang]['product_sunscreen'] }}', 15000, '{{ url_for('static', filename='images/products/sunscreen.jpg') }}')">
+                            {{ translations[lang]['add_to_cart'] }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Blackout Product -->
+            <div class="product-card">
+                <div class="product-image">
+                    <img src="{{ url_for('static', filename='images/products/bk1.jpg') }}" 
+                         alt="{{ translations[lang]['product_blackout'] }}">
+                    <div class="product-badge">Blackout</div>
+                </div>
+                <div class="product-info">
+                    <h3>{{ translations[lang]['product_blackout'] }}</h3>
+                    <p>{{ translations[lang]['product_blackout_desc'] }}</p>
+                    <div class="product-price">Desde $18.000</div>
+                    <div class="product-actions">
+                        <button class="btn btn-primary" 
+                                onclick="addToCart(2, '{{ translations[lang]['product_blackout'] }}', 18000, '{{ url_for('static', filename='images/products/blackout.jpg') }}')">
+                            {{ translations[lang]['add_to_cart'] }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Traditional Product -->
+            <div class="product-card">
+                <div class="product-image">
+                    <img src="{{ url_for('static', filename='images/products/traditional.jpg') }}" 
+                         alt="{{ translations[lang]['product_traditional'] }}">
+                    <div class="product-badge">{% if lang == 'es' %}Tradicional{% else %}Traditional{% endif %}</div>
+                </div>
+                <div class="product-info">
+                    <h3>{{ translations[lang]['product_traditional'] }}</h3>
+                    <p>{{ translations[lang]['product_traditional_desc'] }}</p>
+                    <div class="product-price">Desde $25.000</div>
+                    <div class="product-actions">
+                        <button class="btn btn-primary" 
+                                onclick="addToCart(3, '{{ translations[lang]['product_traditional'] }}', 25000, '{{ url_for('static', filename='images/products/traditional.jpg') }}')">
+                            {{ translations[lang]['add_to_cart'] }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Gallery Section -->
+<section class="gallery" id="gallery">
+    <div class="container">
+        <div class="section-header">
+            <h2>{{ translations[lang]['gallery_title'] }}</h2>
+            <p>{{ translations[lang]['gallery_subtitle'] }}</p>
+        </div>
+        
+        <div class="gallery-carousel">
+            <div class="carousel-container">
+                <div class="carousel-track" id="carousel-track">
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img1.jpg') }}" alt="Instalación 1">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img2.jpg') }}" alt="Instalación 2">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img3.jpg') }}" alt="Instalación 3">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img4.jpg') }}" alt="Instalación 4">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img5.jpg') }}" alt="Instalación 5">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img6.jpg') }}" alt="Instalación 1">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img7.jpg') }}" alt="Instalación 1">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img8.jpg') }}" alt="Instalación 2">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img9.jpg') }}" alt="Instalación 3">
+                    </div>
+                    <div class="carousel-slide">
+                        <img src="{{ url_for('static', filename='images/gallery/img10.jpg') }}" alt="Instalación 4">
+                    </div>
+                </div>
+            </div>
+            <button class="carousel-btn carousel-btn-prev" onclick="moveCarousel(-1)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <button class="carousel-btn carousel-btn-next" onclick="moveCarousel(1)">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+            <div class="carousel-dots" id="carousel-dots"></div>
+        </div>
+    </div>
+</section>
+
+<!-- Quote Section -->
+<section class="quote-section" id="quote">
+    <div class="container">
+        <div class="section-header">
+            <h2>{{ translations[lang]['quote_title'] }}</h2>
+            <p>{{ translations[lang]['quote_subtitle'] }}</p>
+        </div>
+        
+        <!-- Added complete quote form with email integration -->
+        <div class="quote-form-container">
+            <form id="quote-form" class="quote-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">{{ translations[lang]['quote_email'] }} *</label>
+                        <input type="email" id="email" name="email" required 
+                               placeholder="tu@email.com">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="width">{{ translations[lang]['quote_width'] }} *</label>
+                        <input type="number" id="width" name="width" required 
+                               placeholder="150" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="height">{{ translations[lang]['quote_height'] }} *</label>
+                        <input type="number" id="height" name="height" required 
+                               placeholder="200" min="1">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fabric_type">{{ translations[lang]['quote_fabric'] }} *</label>
+                        <select id="fabric_type" name="fabric_type" required>
+                            <option value="">{% if lang == 'es' %}Seleccionar...{% else %}Select...{% endif %}</option>
+                            <option value="sunscreen">{{ translations[lang]['quote_fabric_sunscreen'] }}</option>
+                            <option value="blackout">{{ translations[lang]['quote_fabric_blackout'] }}</option>
+                            <option value="traditional">{{ translations[lang]['quote_fabric_traditional'] }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="quality">{{ translations[lang]['quote_quality'] }} *</label>
+                        <select id="quality" name="quality" required>
+                            <option value="">{% if lang == 'es' %}Seleccionar...{% else %}Select...{% endif %}</option>
+                            <option value="standard">{{ translations[lang]['quote_quality_standard'] }}</option>
+                            <option value="premium">{{ translations[lang]['quote_quality_premium'] }}</option>
+                            <option value="luxury">{{ translations[lang]['quote_quality_luxury'] }}</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="color">{{ translations[lang]['quote_color'] }}</label>
+                        <input type="text" id="color" name="color" 
+                               placeholder="{% if lang == 'es' %}Blanco, Beige, Gris...{% else %}White, Beige, Gray...{% endif %}">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="observations">{{ translations[lang]['quote_observations'] }}</label>
+                        <textarea id="observations" name="observations" rows="4" 
+                                  placeholder="{% if lang == 'es' %}Detalles adicionales sobre tu proyecto...{% else %}Additional details about your project...{% endif %}"></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        {{ translations[lang]['quote_submit'] }}
+                    </button>
+                </div>
+                
+                <div id="quote-message" class="form-message"></div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- Promotional Products Section -->
+<section class="promo-products" id="promotions">
+    <div class="container">
+        <div class="promo-banner">
+            {% if lang == 'es' %}
+                ¡OFERTAS ESPECIALES! Productos seleccionados con descuento
+            {% else %}
+                SPECIAL OFFERS! Selected products on sale
+            {% endif %}
+        </div>
+        
+        <div class="promo-grid">
+            <!-- Promo Product 1: Sunscreen Combo -->
+            <div class="promo-card">
+                <div class="promo-badge">-25%</div>
+                <div class="promo-image">
+                    <img src="{{ url_for('static', filename='images/products/sunscreen.jpg') }}" 
+                         alt="Combo Sunscreen">
+                </div>
+                <div class="promo-info">
+                    <h3>{% if lang == 'es' %}Combo Sunscreen{% else %}Sunscreen Combo{% endif %}</h3>
+                    <p>{% if lang == 'es' %}
+                        2 cortinas roller sunscreen de hasta 1.5m x 2m
+                    {% else %}
+                        2 sunscreen roller blinds up to 1.5m x 2m
+                    {% endif %}</p>
+                    <div class="promo-prices">
+                        <span class="promo-price-old">$30.000</span>
+                        <span class="promo-price-new">$22.500</span>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;"
+                            onclick="addToCart(101, '{% if lang == 'es' %}Combo Sunscreen{% else %}Sunscreen Combo{% endif %}', 22500, '{{ url_for('static', filename='images/products/sunscreen.jpg') }}')">
+                        {{ translations[lang]['add_to_cart'] }}
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Promo Product 2: Blackout Special -->
+            <div class="promo-card">
+                <div class="promo-badge">-30%</div>
+                <div class="promo-image">
+                    <img src="{{ url_for('static', filename='images/products/blackout.jpg') }}" 
+                         alt="Blackout Especial">
+                </div>
+                <div class="promo-info">
+                    <h3>{% if lang == 'es' %}Blackout Premium{% else %}Premium Blackout{% endif %}</h3>
+                    <p>{% if lang == 'es' %}
+                        Cortina blackout premium con instalación incluida
+                    {% else %}
+                        Premium blackout blind with installation included
+                    {% endif %}</p>
+                    <div class="promo-prices">
+                        <span class="promo-price-old">$25.000</span>
+                        <span class="promo-price-new">$17.500</span>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;"
+                            onclick="addToCart(102, '{% if lang == 'es' %}Blackout Premium{% else %}Premium Blackout{% endif %}', 17500, '{{ url_for('static', filename='images/products/blackout.jpg') }}')">
+                        {{ translations[lang]['add_to_cart'] }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section class="contact" id="contact">
+    <div class="container">
+        <div class="section-header">
+            <h2>{{ translations[lang]['footer_contact'] }}</h2>
+            <p>{% if lang == 'es' %}Estamos aquí para ayudarte{% else %}We're here to help{% endif %}</p>
+        </div>
+        
+        <div class="contact-grid">
+            <div class="contact-card">
+                <div class="contact-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                    </svg>
+                </div>
+                <h3>WhatsApp</h3>
+                <p>+54 9 2494630750</p>
+                <a href="https://wa.me/5492494630750" class="btn btn-outline" target="_blank">
+                    {% if lang == 'es' %}Enviar mensaje{% else %}Send message{% endif %}
+                </a>
+            </div>
+            
+            <div class="contact-card">
+                <div class="contact-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                    </svg>
+                </div>
+                <h3>Instagram</h3>
+                <p>@amarigom.deco</p>
+                <a href="https://instagram.com/amarigom.deco" class="btn btn-outline" target="_blank">
+                    {% if lang == 'es' %}Seguir{% else %}Follow{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Hero Section */
+.hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.hero-background {
+    position: absolute;
+    inset: 0;
+    background-image: url("{{ url_for('static', filename='images/hero-bg.jpg') }}");
+    background-size: cover;
+    background-position: center;
+    filter: blur(3px);
+}
+
+.hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(10, 10, 10, 0.6) 0%, rgba(26, 26, 26, 0.65) 100%);
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    max-width: 800px;
+}
+
+.hero-title {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-accent-gold);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    margin-bottom: 2.5rem;
+    color: var(--color-text-primary);
+    line-height: 1.8;
+}
+
+.hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* About Section */
+.about {
+    padding: 5rem 0;
+    background: var(--color-bg-secondary);
+}
+
+.about-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+}
+
+.about-text h2 {
+    font-size: 2.5rem;
+    color: var(--color-accent-gold);
+    margin-bottom: 1.5rem;
+}
+
+.about-text p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--color-text-secondary);
+}
+
+.about-image img {
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Section Header */
+.section-header {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.section-header h2 {
+    font-size: 3rem;
+    color: var(--color-accent-gold);
+    margin-bottom: 1rem;
+}
+
+.section-header p {
+    font-size: 1.1rem;
+    color: var(--color-text-secondary);
+}
+
+/* Products Section */
+.products {
+    padding: 5rem 0;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+}
+
+.product-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.product-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(201, 169, 97, 0.2);
+}
+
+.product-image {
+    position: relative;
+    height: 300px;
+    overflow: hidden;
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.product-card:hover .product-image img {
+    transform: scale(1.05);
+}
+
+.product-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--color-accent-gold);
+    color: var(--color-bg-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+.product-info {
+    padding: 1.5rem;
+}
+
+.product-info h3 {
+    font-size: 1.5rem;
+    color: var(--color-accent-gold);
+    margin-bottom: 0.75rem;
+}
+
+.product-info p {
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.product-price {
+    font-size: 1.5rem;
+    color: var(--color-accent-gold);
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.product-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Gallery Section */
+.gallery {
+    padding: 5rem 0;
+    background: var(--color-bg-secondary);
+}
+
+.gallery-carousel {
+    position: relative;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.carousel-container {
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.carousel-track {
+    display: flex;
+    transition: transform 0.5s ease;
+}
+
+.carousel-slide {
+    min-width: 100%;
+    height: 600px;
+}
+
+.carousel-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(10, 10, 10, 0.7);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-btn:hover {
+    background: var(--color-accent-gold);
+    color: var(--color-bg-primary);
+}
+
+.carousel-btn-prev {
+    left: 1rem;
+}
+
+.carousel-btn-next {
+    right: 1rem;
+}
+
+.carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.carousel-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-border);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.carousel-dot.active {
+    background: var(--color-accent-gold);
+    width: 30px;
+    border-radius: 6px;
+}
+
+/* Quote Form Styles */
+.quote-form-container {
+    max-width: 700px;
+    margin: 0 auto;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 2.5rem;
+}
+
+.quote-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    color: var(--color-accent-gold);
+    font-size: 0.9rem;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-accent-gold);
+    box-shadow: 0 0 0 3px rgba(201, 169, 97, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+.form-actions .btn {
+    min-width: 200px;
+}
+
+.form-message {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+    display: none;
+}
+
+.form-message.success {
+    display: block;
+    background: rgba(201, 169, 97, 0.1);
+    border: 1px solid var(--color-accent-gold);
+    color: var(--color-accent-gold);
+}
+
+.form-message.error {
+    display: block;
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid #dc2626;
+    color: #dc2626;
+}
+
+/* Contact Section */
+.contact {
+    padding: 5rem 0;
+    background: var(--color-bg-secondary);
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.contact-card {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: transform 0.3s;
+}
+
+.contact-card:hover {
+    transform: translateY(-8px);
+}
+
+.contact-icon {
+    color: var(--color-accent-gold);
+    margin-bottom: 1rem;
+}
+
+.contact-card h3 {
+    font-size: 1.5rem;
+    color: var(--color-accent-gold);
+    margin-bottom: 0.5rem;
+}
+
+.contact-card p {
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+/* Promotional Products Section */
+.promo-products {
+    padding: 5rem 0;
+    background: var(--color-bg-secondary);
+}
+
+.promo-banner {
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+    color: var(--color-accent-gold);
+}
+
+.promo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.promo-card {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.promo-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(201, 169, 97, 0.2);
+}
+
+.promo-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--color-accent-gold);
+    color: var(--color-bg-primary);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+.promo-image {
+    position: relative;
+    height: 300px;
+    overflow: hidden;
+}
+
+.promo-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.promo-card:hover .promo-image img {
+    transform: scale(1.05);
+}
+
+.promo-info {
+    padding: 1.5rem;
+}
+
+.promo-info h3 {
+    font-size: 1.5rem;
+    color: var(--color-accent-gold);
+    margin-bottom: 0.75rem;
+}
+
+.promo-info p {
+    color: var(--color-text-secondary);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.promo-prices {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.promo-price-old {
+    text-decoration: line-through;
+    color: var(--color-text-secondary);
+}
+
+.promo-price-new {
+    font-size: 1.5rem;
+    color: var(--color-accent-gold);
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+    
+    .about-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .carousel-slide {
+        height: 400px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Carousel functionality
+let currentSlide = 0;
+const slides = document.querySelectorAll('.carousel-slide');
+const totalSlides = slides.length;
+
+// Create dots
+const dotsContainer = document.getElementById('carousel-dots');
+for (let i = 0; i < totalSlides; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'carousel-dot';
+    if (i === 0) dot.classList.add('active');
+    dot.onclick = () => goToSlide(i);
+    dotsContainer.appendChild(dot);
+}
+
+function moveCarousel(direction) {
+    currentSlide += direction;
+    if (currentSlide < 0) currentSlide = totalSlides - 1;
+    if (currentSlide >= totalSlides) currentSlide = 0;
+    updateCarousel();
+}
+
+function goToSlide(index) {
+    currentSlide = index;
+    updateCarousel();
+}
+
+function updateCarousel() {
+    const track = document.getElementById('carousel-track');
+    track.style.transform = `translateX(-${currentSlide * 100}%)`;
+    
+    // Update dots
+    document.querySelectorAll('.carousel-dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index === currentSlide);
+    });
+}
+
+// Auto-advance carousel
+setInterval(() => {
+    moveCarousel(1);
+}, 5000);
+
+// Quote form submission handler
+document.getElementById('quote-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = {
+        email: document.getElementById('email').value,
+        width: document.getElementById('width').value,
+        height: document.getElementById('height').value,
+        fabric_type: document.getElementById('fabric_type').value,
+        color: document.getElementById('color').value || 'No especificado',
+        quality: document.getElementById('quality').value,
+        observations: document.getElementById('observations').value || 'Ninguna'
+    };
+    
+    const messageDiv = document.getElementById('quote-message');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.textContent = '{{ "Enviando..." if lang == "es" else "Sending..." }}';
+    
+    try {
+        const response = await fetch('/quote/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            messageDiv.className = 'form-message success';
+            messageDiv.textContent = '{{ translations[lang]["quote_success"] }}';
+            e.target.reset();
+        } else {
+            messageDiv.className = 'form-message error';
+            messageDiv.textContent = data.message || '{{ translations[lang]["quote_error"] }}';
+        }
+    } catch (error) {
+        console.error('[v0] Error submitting quote:', error);
+        messageDiv.className = 'form-message error';
+        messageDiv.textContent = '{{ translations[lang]["quote_error"] }}';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '{{ translations[lang]["quote_submit"] }}';
+        
+        // Hide message after 5 seconds
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}
