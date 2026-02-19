@@ -30,5 +30,10 @@ app.register_blueprint(cart_bp, url_prefix='/cart')
 def inject_language():
     return dict(lang=session.get('language', 'es'))
 
+
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Intentamos leer el puerto que nos da Render, si no existe, usamos el 5000
+    port = int(os.environ.get("PORT", 5000))
+    # En producción (Render) el debug debe ser False por seguridad
+    app.run(host='0.0.0.0', port=port, debug=False)
