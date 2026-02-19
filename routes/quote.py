@@ -52,4 +52,3 @@ def request_quote():
     except Exception as e:
         current_app.logger.error(f'Error en cotización: {str(e)}')
         return jsonify({'error': 'Error interno del servidor'}), 500
-

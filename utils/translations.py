@@ -9,6 +9,8 @@ TRANSLATIONS = {
         'nav_products': 'Productos',
         'nav_gallery': 'Galería',
         'nav_contact': 'Contacto',
+        'nav_measurements': 'Medidas',
+        'nav_faq': 'FAQ',
         
         # Hero
         'hero_title': 'Cortinas y Persianas de Elegancia',
@@ -75,6 +77,8 @@ TRANSLATIONS = {
         'nav_products': 'Products',
         'nav_gallery': 'Gallery',
         'nav_contact': 'Contact',
+        'nav_measurements': 'Measuring',
+        'nav_faq': 'FAQ',
         
         # Hero
         'hero_title': 'Elegant Curtains and Blinds',

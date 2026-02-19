@@ -13,7 +13,7 @@ class Config:
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'amarigomdeco@gmail.com'
     
     MAIL_ENABLED = bool(MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD)
     
@@ -28,4 +28,4 @@ class Config:
     # Información de contacto
     CONTACT_EMAIL = os.environ.get('CONTACT_EMAIL') or 'contacto@amarigom.com'
     WHATSAPP_NUMBER = os.environ.get('WHATSAPP_NUMBER') or '+5492494630750'
-    INSTAGRAM_URL = os.environ.get('INSTAGRAM_URL') or 'https://instagram.com/amarigom_deco'
+    INSTAGRAM_URL = os.environ.get('INSTAGRAM_URL') or 'https://instagram.com/amarigom'

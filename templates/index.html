@@ -82,7 +82,7 @@
                     <div class="product-price">Desde $18.000</div>
                     <div class="product-actions">
                         <button class="btn btn-primary" 
-                                onclick="addToCart(2, '{{ translations[lang]['product_blackout'] }}', 18000, '{{ url_for('static', filename='images/products/blackout.jpg') }}')">
+                            onclick="addToCart(2, '{{ translations[lang]['product_blackout'] }}', 18000, '{{ url_for('static', filename='images/products/bk1.jpg') }}')">
                             {{ translations[lang]['add_to_cart'] }}
                         </button>
                     </div>
@@ -93,7 +93,7 @@
             <div class="product-card">
                 <div class="product-image">
                     <img src="{{ url_for('static', filename='images/products/traditional.jpg') }}" 
-                         alt="{{ translations[lang]['product_traditional'] }}">
+                        alt="{{ translations[lang]['product_traditional'] }}">
                     <div class="product-badge">{% if lang == 'es' %}Tradicional{% else %}Traditional{% endif %}</div>
                 </div>
                 <div class="product-info">
@@ -139,19 +139,19 @@
                         <img src="{{ url_for('static', filename='images/gallery/img5.jpg') }}" alt="Instalación 5">
                     </div>
                     <div class="carousel-slide">
-                        <img src="{{ url_for('static', filename='images/gallery/img6.jpg') }}" alt="Instalación 1">
+                        <img src="{{ url_for('static', filename='images/gallery/img6.jpg') }}" alt="Instalación 6">
                     </div>
                     <div class="carousel-slide">
-                        <img src="{{ url_for('static', filename='images/gallery/img7.jpg') }}" alt="Instalación 1">
+                        <img src="{{ url_for('static', filename='images/gallery/img7.jpg') }}" alt="Instalación 7">
                     </div>
                     <div class="carousel-slide">
-                        <img src="{{ url_for('static', filename='images/gallery/img8.jpg') }}" alt="Instalación 2">
+                        <img src="{{ url_for('static', filename='images/gallery/img8.jpg') }}" alt="Instalación 8">
                     </div>
                     <div class="carousel-slide">
-                        <img src="{{ url_for('static', filename='images/gallery/img9.jpg') }}" alt="Instalación 3">
+                        <img src="{{ url_for('static', filename='images/gallery/img9.jpg') }}" alt="Instalación 9">
                     </div>
                     <div class="carousel-slide">
-                        <img src="{{ url_for('static', filename='images/gallery/img10.jpg') }}" alt="Instalación 4">
+                        <img src="{{ url_for('static', filename='images/gallery/img10.jpg') }}" alt="Instalación 10">
                     </div>
                 </div>
             </div>
@@ -166,6 +166,147 @@
                 </svg>
             </button>
             <div class="carousel-dots" id="carousel-dots"></div>
+        </div>
+    </div>
+</section>
+
+<!-- How to Measure Section -->
+<section class="measurements" id="measurements">
+    <div class="container">
+        <div class="section-header">
+            <h2>{% if lang == 'es' %}Como Tomar Medidas{% else %}How to Measure{% endif %}</h2>
+            <p>{% if lang == 'es' %}Tips importantes antes de solicitar tu cotizacion{% else %}Important tips before requesting your quote{% endif %}</p>
+        </div>
+
+        <div class="measurements-grid">
+            <!-- Cortinas Roller -->
+            <div class="measure-card">
+                <div class="measure-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="12" y1="3" x2="12" y2="9"></line>
+                    </svg>
+                </div>
+                <h3>{% if lang == 'es' %}Cortinas Roller{% else %}Roller Blinds{% endif %}</h3>
+                <ul class="measure-tips">
+                    <li>
+                        <span class="tip-number">1</span>
+                        <div>
+                            <strong>{% if lang == 'es' %}Ancho:{% else %}Width:{% endif %}</strong>
+                            {% if lang == 'es' %}
+                            Medir el ancho del vano de la ventana y sumar 5 cm de cada lado (10 cm en total) si hay espacio disponible. Esto evita filtraciones de luz por los costados.
+                            {% else %}
+                            Measure the window opening width and add 5 cm on each side (10 cm total) if space is available. This prevents light leakage from the sides.
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li>
+                        <span class="tip-number">2</span>
+                        <div>
+                            <strong>{% if lang == 'es' %}Alto:{% else %}Height:{% endif %}</strong>
+                            {% if lang == 'es' %}
+                            Medir desde donde se colocara el soporte hasta el largo deseado. Tener en cuenta que se necesitan aproximadamente 30 cm adicionales de tela que quedan enrollados en el tubo superior.
+                            {% else %}
+                            Measure from where the bracket will be placed to the desired length. Keep in mind that approximately 30 cm of additional fabric stays rolled on the upper tube.
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li>
+                        <span class="tip-number">3</span>
+                        <div>
+                            <strong>{% if lang == 'es' %}Tipo de ventana:{% else %}Window type:{% endif %}</strong>
+                            {% if lang == 'es' %}
+                            Verificar si la ventana esta en un angulo, empotrada en la pared o tiene salientes. Esto afecta la instalacion y el tipo de soporte necesario.
+                            {% else %}
+                            Check if the window is at an angle, recessed into the wall, or has protrusions. This affects the installation and the type of bracket needed.
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li>
+                        <span class="tip-number">4</span>
+                        <div>
+                            <strong>{% if lang == 'es' %}Espacio libre:{% else %}Clear space:{% endif %}</strong>
+                            {% if lang == 'es' %}
+                            Comprobar que no haya manijas, cerraduras u otros elementos que interfieran con el movimiento de la cortina al subir y bajar.
+                            {% else %}
+                            Make sure there are no handles, locks or other elements that interfere with the curtain movement when raising and lowering.
+                            {% endif %}
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Cortinas Tradicionales -->
+            <div class="measure-card">
+                <div class="measure-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4 4h16v2H4z"></path>
+                        <path d="M6 6c0 4-2 12-2 14h4c0-2 2-10 4-14"></path>
+                        <path d="M12 6c2 4 4 12 4 14h4c0-2-2-10-2-14"></path>
+                    </svg>
+                </div>
+                <h3>{% if lang == 'es' %}Cortinas Tradicionales{% else %}Traditional Curtains{% endif %}</h3>
+                <ul class="measure-tips">
+                    <li>
+                        <span class="tip-number">1</span>
+                        <div>
+                            <strong>{% if lang == 'es' %}Alto total:{% else %}Total height:{% endif %}</strong>
+                            {% if lang == 'es' %}
+                            Medir desde el zocalo (o moldura superior) hasta la posicion exacta donde se colocara el barral. Si el barral ya esta instalado, medir desde el barral hasta el piso o largo deseado.
+                            {% else %}
+                            Measure from the baseboard (or upper molding) to the exact position where the rod will be placed. If the rod is already installed, measure from the rod to the floor or desired length.
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li>
+                        <span class="tip-number">2</span>
+                        <div>
+                            <strong>{% if lang == 'es' %}Ancho del barral:{% else %}Rod width:{% endif %}</strong>
+                            {% if lang == 'es' %}
+                            El barral debe sobresalir entre 15 y 20 cm de cada lado de la ventana para permitir que la cortina se abra completamente y no bloquee la luz natural.
+                            {% else %}
+                            The rod should extend 15 to 20 cm beyond each side of the window to allow the curtain to open fully and not block natural light.
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li>
+                        <span class="tip-number">3</span>
+                        <div>
+                            <strong>{% if lang == 'es' %}Caida de la tela:{% else %}Fabric drape:{% endif %}</strong>
+                            {% if lang == 'es' %}
+                            Para un efecto elegante con pliegues, el ancho de tela recomendado es entre 1.5x y 2x el ancho de la ventana. Mas tela genera pliegues mas ricos y un aspecto mas lujoso.
+                            {% else %}
+                            For an elegant pleated effect, the recommended fabric width is between 1.5x and 2x the window width. More fabric creates richer folds and a more luxurious look.
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li>
+                        <span class="tip-number">4</span>
+                        <div>
+                            <strong>{% if lang == 'es' %}Distancia al piso:{% else %}Distance to floor:{% endif %}</strong>
+                            {% if lang == 'es' %}
+                            Decidir si la cortina llegara al piso (dejar 1-2 cm de separacion) o si tendra un largo medio. Las cortinas que tocan el piso dan un aspecto mas formal y elegante.
+                            {% else %}
+                            Decide if the curtain will reach the floor (leave 1-2 cm clearance) or have a mid-length. Floor-length curtains give a more formal and elegant appearance.
+                            {% endif %}
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="measure-note">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <p>{% if lang == 'es' %}
+                <strong>Consejo:</strong> Si tienes dudas sobre como medir, envianos fotos de tus ventanas por WhatsApp y te asesoramos sin compromiso.
+            {% else %}
+                <strong>Tip:</strong> If you have doubts about how to measure, send us photos of your windows via WhatsApp and we'll advise you with no obligation.
+            {% endif %}</p>
         </div>
     </div>
 </section>
@@ -318,6 +459,120 @@
     </div>
 </section>
 
+<!-- FAQ Section -->
+<section class="faq" id="faq">
+    <div class="container">
+        <div class="section-header">
+            <h2>{% if lang == 'es' %}Preguntas Frecuentes{% else %}Frequently Asked Questions{% endif %}</h2>
+            <p>{% if lang == 'es' %}Resolvemos tus dudas mas comunes{% else %}We answer your most common questions{% endif %}</p>
+        </div>
+
+        <div class="faq-list">
+            <!-- FAQ 1: Medidas Roller -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>{% if lang == 'es' %}Como tomo las medidas para una cortina roller?{% else %}How do I take measurements for a roller blind?{% endif %}</span>
+                    <svg class="faq-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <p>{% if lang == 'es' %}
+                        Medi el ancho del vano de la ventana y suma 5 cm de cada lado si hay espacio. Para el alto, medi desde donde ira el soporte hasta el largo deseado y tene en cuenta que se necesitan unos 30 cm adicionales que quedan enrollados en el tubo. Tambien verifica si la ventana tiene angulo o esta empotrada, y que no haya manijas que interfieran con el movimiento.
+                    {% else %}
+                        Measure the window opening width and add 5 cm on each side if space allows. For height, measure from where the bracket will go to the desired length, keeping in mind that about 30 cm of extra fabric stays rolled on the tube. Also check if the window is angled or recessed, and that there are no handles interfering with movement.
+                    {% endif %}</p>
+                </div>
+            </div>
+
+            <!-- FAQ 2: Medidas Tradicional -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>{% if lang == 'es' %}Como mido para una cortina tradicional con barral?{% else %}How do I measure for a traditional rod-mounted curtain?{% endif %}</span>
+                    <svg class="faq-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <p>{% if lang == 'es' %}
+                        Medi el alto total desde el zocalo hasta donde se colocara el barral. El barral debe sobresalir 15-20 cm de cada lado de la ventana. Para un efecto elegante con pliegues, el ancho de tela debe ser 1.5x a 2x el ancho de la ventana. Si la cortina llega al piso, deja 1-2 cm de separacion.
+                    {% else %}
+                        Measure the total height from the baseboard to where the rod will be placed. The rod should extend 15-20 cm beyond each side of the window. For an elegant pleated effect, fabric width should be 1.5x to 2x the window width. If the curtain reaches the floor, leave 1-2 cm clearance.
+                    {% endif %}</p>
+                </div>
+            </div>
+
+            <!-- FAQ 3: Diferencia Sunscreen vs Blackout -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>{% if lang == 'es' %}Cual es la diferencia entre sunscreen y blackout?{% else %}What is the difference between sunscreen and blackout?{% endif %}</span>
+                    <svg class="faq-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <p>{% if lang == 'es' %}
+                        La cortina <strong>sunscreen</strong> filtra la luz solar permitiendo ver hacia afuera durante el dia, ideal para living y cocinas. La cortina <strong>blackout</strong> bloquea completamente la luz, perfecta para dormitorios y salas de proyeccion donde se necesita oscuridad total.
+                    {% else %}
+                        <strong>Sunscreen</strong> blinds filter sunlight while allowing you to see outside during the day, ideal for living rooms and kitchens. <strong>Blackout</strong> blinds completely block light, perfect for bedrooms and projection rooms where total darkness is needed.
+                    {% endif %}</p>
+                </div>
+            </div>
+
+            <!-- FAQ 4: Tiempo de entrega -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>{% if lang == 'es' %}Cuanto tiempo demora la fabricacion e instalacion?{% else %}How long does manufacturing and installation take?{% endif %}</span>
+                    <svg class="faq-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <p>{% if lang == 'es' %}
+                        El tiempo de fabricacion es de aproximadamente 7 a 15 dias habiles dependiendo del tipo de cortina y la disponibilidad de telas. La instalacion se coordina una vez que el producto esta listo y generalmente se realiza en el mismo dia.
+                    {% else %}
+                        Manufacturing time is approximately 7 to 15 business days depending on the curtain type and fabric availability. Installation is coordinated once the product is ready and is usually completed the same day.
+                    {% endif %}</p>
+                </div>
+            </div>
+
+            <!-- FAQ 5: Garantia -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>{% if lang == 'es' %}Los productos tienen garantia?{% else %}Do products come with a warranty?{% endif %}</span>
+                    <svg class="faq-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <p>{% if lang == 'es' %}
+                        Si, todos nuestros productos cuentan con garantia. Las cortinas roller tienen garantia de 2 anos en mecanismo y 1 ano en tela. Las cortinas tradicionales tienen garantia de 1 ano en confeccion. La garantia cubre defectos de fabricacion, no el desgaste normal por uso.
+                    {% else %}
+                        Yes, all our products come with a warranty. Roller blinds have a 2-year warranty on the mechanism and 1 year on fabric. Traditional curtains have a 1-year warranty on tailoring. The warranty covers manufacturing defects, not normal wear and tear.
+                    {% endif %}</p>
+                </div>
+            </div>
+
+            <!-- FAQ 6: Limpieza -->
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    <span>{% if lang == 'es' %}Como se limpian las cortinas roller?{% else %}How do you clean roller blinds?{% endif %}</span>
+                    <svg class="faq-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="faq-answer">
+                    <p>{% if lang == 'es' %}
+                        Las cortinas roller se limpian facilmente con un pano humedo y jabon neutro. No usar productos abrasivos. Para una limpieza mas profunda, se pueden desmontar y lavar con agua tibia. Es recomendable limpiarlas al menos una vez al mes para mantenerlas en optimo estado.
+                    {% else %}
+                        Roller blinds are easily cleaned with a damp cloth and neutral soap. Do not use abrasive products. For a deeper clean, they can be dismounted and washed with warm water. It is recommended to clean them at least once a month to keep them in optimal condition.
+                    {% endif %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Contact Section -->
 <section class="contact" id="contact">
     <div class="container">
@@ -350,7 +605,7 @@
                 </div>
                 <h3>Instagram</h3>
                 <p>@amarigom.deco</p>
-                <a href="https://instagram.com/amarigom.deco" class="btn btn-outline" target="_blank">
+                <a href="https://instagram.com/amarigom" class="btn btn-outline" target="_blank">
                     {% if lang == 'es' %}Seguir{% else %}Follow{% endif %}
                 </a>
             </div>
@@ -629,6 +884,189 @@
     border-radius: 6px;
 }
 
+/* Measurements Section */
+.measurements {
+    padding: 5rem 0;
+}
+
+.measurements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2.5rem;
+    margin-bottom: 2.5rem;
+}
+
+.measure-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 2.5rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.measure-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(201, 169, 97, 0.15);
+}
+
+.measure-icon {
+    color: var(--color-accent-gold);
+    margin-bottom: 1.5rem;
+}
+
+.measure-card h3 {
+    font-size: 1.8rem;
+    color: var(--color-accent-gold);
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.measure-tips {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.measure-tips li {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.tip-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    background: var(--color-accent-gold);
+    color: var(--color-bg-primary);
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.measure-tips li div {
+    color: var(--color-text-secondary);
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+.measure-tips li div strong {
+    color: var(--color-text-primary);
+}
+
+.measure-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    background: rgba(201, 169, 97, 0.08);
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-accent-gold);
+    border-radius: 4px;
+    padding: 1.25rem 1.5rem;
+}
+
+.measure-note svg {
+    color: var(--color-accent-gold);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.measure-note p {
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.measure-note p strong {
+    color: var(--color-accent-gold);
+}
+
+/* FAQ Section */
+.faq {
+    padding: 5rem 0;
+}
+
+.faq-list {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.faq-item {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.3s;
+}
+
+.faq-item:hover {
+    border-color: rgba(201, 169, 97, 0.4);
+}
+
+.faq-item.active {
+    border-color: var(--color-accent-gold);
+}
+
+.faq-question {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary);
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.3s;
+    gap: 1rem;
+}
+
+.faq-question:hover {
+    color: var(--color-accent-gold);
+}
+
+.faq-item.active .faq-question {
+    color: var(--color-accent-gold);
+}
+
+.faq-arrow {
+    flex-shrink: 0;
+    transition: transform 0.3s;
+    color: var(--color-accent-gold);
+}
+
+.faq-item.active .faq-arrow {
+    transform: rotate(180deg);
+}
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+}
+
+.faq-item.active .faq-answer {
+    max-height: 300px;
+}
+
+.faq-answer p {
+    padding: 0 1.5rem 1.5rem;
+    color: var(--color-text-secondary);
+    line-height: 1.8;
+    font-size: 0.95rem;
+}
+
 /* Quote Form Styles */
 .quote-form-container {
     max-width: 700px;
@@ -884,6 +1322,14 @@
     .carousel-slide {
         height: 400px;
     }
+
+    .measurements-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .measure-card {
+        padding: 1.5rem;
+    }
 }
 </style>
 {% endblock %}
@@ -931,6 +1377,22 @@ function updateCarousel() {
 setInterval(() => {
     moveCarousel(1);
 }, 5000);
+
+// FAQ accordion toggle
+function toggleFaq(button) {
+    const item = button.parentElement;
+    const isActive = item.classList.contains('active');
+    
+    // Close all other FAQ items
+    document.querySelectorAll('.faq-item').forEach(faqItem => {
+        faqItem.classList.remove('active');
+    });
+    
+    // Toggle current item
+    if (!isActive) {
+        item.classList.add('active');
+    }
+}
 
 // Quote form submission handler
 document.getElementById('quote-form').addEventListener('submit', async (e) => {

@@ -12,9 +12,9 @@ def index():
 
 @main_bp.route('/set-language/<lang>')
 def set_language(lang):
-    """Cambiar idioma de la aplicación"""
+    """Cambiar idioma de la aplicacion"""
     if lang in ['es', 'en']:
         session['language'] = lang
         session.modified = True
     from flask import jsonify
-    return jsonify({'success': True, 'language': lang}), 200 # No content response
+    return jsonify({'success': True, 'language': lang}), 200

@@ -1,8 +1,8 @@
-// Estado global de la aplicación
-let currentLang = document.documentElement.lang|| "es"
+// Estado global de la aplicacion
+let currentLang = document.documentElement.lang || "es"
 let cart = []
 
-// Inicialización
+// Inicializacion
 document.addEventListener("DOMContentLoaded", () => {
   loadCart()
   updateCartCount()
@@ -11,7 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
 // Cambio de idioma
 function toggleLanguage() {
   const newLang = currentLang === "es" ? "en" : "es"
-  fetch(`/set-language/${newLang}`).then((response) => {
+  fetch(`/set-language/${newLang}`)
+    .then((response) => {
       if (response.ok) {
         currentLang = newLang
         window.location.reload()

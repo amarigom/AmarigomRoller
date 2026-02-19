@@ -269,7 +269,7 @@ body {
 ## 📱 Contacto
 
 - **WhatsApp**: +54 9 2494630750
-- **Instagram**: @amarigom.deco
+- **Instagram**: @amarigom
 - **Email**: andrea.marigomez@amarigom.com
 
 ## 🚀 Próximas Mejoras
@@ -322,4 +322,3 @@ Si encuentras algún problema o tienes preguntas:
 1. Revisa la documentación
 2. Verifica las variables de entorno
 3. Contacta al desarrollador
-

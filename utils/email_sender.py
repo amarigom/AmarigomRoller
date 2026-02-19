@@ -2,14 +2,25 @@ from flask import current_app
 from flask_mail import Message
 from threading import Thread
 
+##def send_async_email(app, msg):
+##  """Enviar email de forma asíncrona"""
+##  with app.app_context():
+##     try:
+##        from app import mail
+##        mail.send(msg)
+##    except Exception as e:
+##        current_app.logger.error(f'Error enviando email: {str(e)}')
+
 def send_async_email(app, msg):
-    """Enviar email de forma asíncrona"""
     with app.app_context():
         try:
-            from app import mail
-            mail.send(msg)
+            # En lugar de "from app import mail", usa esto:
+            if hasattr(app, 'mail') and app.mail:
+                app.mail.send(msg)
+            else:
+                print("Error: app.mail no está inicializado")
         except Exception as e:
-            current_app.logger.error(f'Error enviando email: {str(e)}')
+            app.logger.error(f'Error enviando email: {str(e)}')
 
 def send_quote_email(quote_data):
     """
@@ -22,16 +33,24 @@ def send_quote_email(quote_data):
         bool: True si se envió exitosamente, False en caso contrario
     """
     try:
+        sender_email = current_app.config.get('MAIL_DEFAULT_SENDER')
+        if not sender_email:
+            sender_email = 'tu-correo-real@gmail.com' # Remitente de respaldo
         # Email al cliente
         customer_msg = Message(
-            subject='Cotización AMARIGOM DECO - Cortinas y Persianas',
-            recipients=[quote_data['email']],
-            html=render_customer_email(quote_data)
+           subject='Cotización AMARIGOM DECO - Cortinas y Persianas',
+           sender=sender_email,
+           recipients=[quote_data['email']],
+           html=render_customer_email(quote_data)
         )
+        
+        
         
         # Email a la empresa (copia)
         admin_msg = Message(
             subject=f'Nueva Cotización de {quote_data["email"]}',
+            sender=sender_email,
+            
             recipients=[current_app.config['CONTACT_EMAIL']],
             html=render_admin_email(quote_data)
         )

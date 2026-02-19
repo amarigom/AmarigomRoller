@@ -16,8 +16,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "AMARIGOM DECO - Cortinas Roller & Tradicionales",
-  description: "Cortinas Roller Blackout y Sunscreen, Cortinas Tradicionales de alta calidad",
+  title: "AMARIGOM DECO - Proyecto Flask",
+  description: "Proyecto Flask para AMARIGOM DECO - Cortinas Roller y Tradicionales",
     generator: 'v0.app'
 }
 
@@ -29,13 +29,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${cormorant.variable} ${inter.variable}`}>
       <body className="font-sans antialiased">
-        <LanguageProvider>
-          <CartProvider>
-            <Header />
-            {children}
-            <Footer />
-          </CartProvider>
-        </LanguageProvider>
+        {children}
       </body>
     </html>
   )
