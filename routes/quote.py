@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from utils.email_sender import send_quote_email
+from utils.email_resend import send_resend_email
 
 quote_bp = Blueprint('quote', __name__)
 
@@ -29,7 +30,9 @@ def request_quote():
         }
         
         if current_app.config['MAIL_ENABLED']:
-            success = send_quote_email(quote_data)
+            
+            #success = send_quote_email(quote_data)
+            success = send_resend_email("Nueva Cotización Amarigom", quote_data)
             
             if success:
                 return jsonify({
