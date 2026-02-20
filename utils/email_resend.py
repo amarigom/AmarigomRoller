@@ -18,7 +18,7 @@ def send_resend_email(asunto, quote_data):
         """
         params = {
             "from": "Amarigom <onboarding@resend.dev>", # Al principio usá este de prueba
-            "to": ["tu-correo@gmail.com"], # Tu correo donde querés recibir las cotizaciones
+            "to": ["amarigomdeco@gmail.com"], # Tu correo donde querés recibir las cotizaciones
             "subject": asunto,
             "html": mensaje_html,
         }
