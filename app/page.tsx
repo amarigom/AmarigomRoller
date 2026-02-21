@@ -70,7 +70,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   useEffect(() => {
     // Le pedimos los datos a nuestro Flask
-    fetch('http://127.0.0.1:5000/')
+    fetch('https://amarigomroller-backend-test.onrender.com/')
       .then(res => res.json())
       .then(data => {
         // Guardamos las traducciones que vienen de Python
