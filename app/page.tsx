@@ -79,7 +79,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       .catch(err => console.error("Error conectando con Python:", err));
   }, []);
 
-useEffect(() => {
+  useEffect(() => {
   const timer = setInterval(() => {
     nextSlide(); // Esto hará que pase a la siguiente foto cada 5 segundos
   }, 5000);
