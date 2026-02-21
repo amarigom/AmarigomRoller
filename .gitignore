@@ -28,3 +28,4 @@ Thumbs.db
 # Uploads
 static/images/uploads/*
 !static/images/uploads/.gitkeep
+node_modules

@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 14, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/Usuario/Desktop/ANDREA/PROGRAMACION/ROLLER/app/page.tsx"],"sourcesContent":["export default function Home() {\n  return (\n    <main className=\"min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-24\">\n      {/* Usamos el color hexadecimal directo para asegurar que funcione */}\n      <h1 className=\"text-6xl font-serif mb-8\" style={{ color: '#c9a961' }}>\n        Andrea Roller\n      </h1>\n      \n      <p className=\"text-[#c4c4b8] text-xl max-w-2xl text-center mb-12\">\n        Diseño de cortinas y ambientes exclusivos con  elegancia y distinción.\n      </p>\n      \n      <div className=\"p-8 border border-[#c9a961] bg-[#1a1a1a] rounded-lg shadow-[0_0_20px_rgba(201,169,97,0.2)]\">\n        <button className=\"bg-[#c9a961] text-[#0a0a0a] px-8 py-3 rounded-md font-bold hover:bg-[#d4b574] transition-all\">\n          Solicitar Presupuesto\n        </button>\n      </div>\n    </main>\n  )\n}"],"names":[],"mappings":";;;;;;AAAe,SAAS;IACtB,qBACE,6RAAC;QAAK,WAAU;;0BAEd,6RAAC;gBAAG,WAAU;gBAA2B,OAAO;oBAAE,OAAO;gBAAU;0BAAG;;;;;;0BAItE,6RAAC;gBAAE,WAAU;0BAAqD;;;;;;0BAIlE,6RAAC;gBAAI,WAAU;0BACb,cAAA,6RAAC;oBAAO,WAAU;8BAA+F;;;;;;;;;;;;;;;;;AAMzH","debugId":null}}]
+}
