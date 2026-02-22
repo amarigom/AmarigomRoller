@@ -1,9 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session
 from config import Config
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
+CORS(app)
 
 if app.config['MAIL_ENABLED']:
     from flask_mail import Mail
