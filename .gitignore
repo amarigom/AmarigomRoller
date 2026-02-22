@@ -29,3 +29,5 @@ Thumbs.db
 static/images/uploads/*
 !static/images/uploads/.gitkeep
 node_modules
+node_modules/
+.next/
