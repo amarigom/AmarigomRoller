@@ -1,5 +1,6 @@
 "use client";
 
+import Hero from '@/components/sections/Hero';
 import React,{ useEffect, useState } from 'react';
 
 export default function Home() {
@@ -101,29 +102,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     <div className="flex flex-col min-h-screen bg-black text-white selection:bg-[#c9a961] selection:text-black">
       
       {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        {/* Imagen de fondo  */}
-        <div className="absolute inset-0 bg-[url('/images/hero-bg.jpg')] bg-cover bg-center opacity-90"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 to-black"></div>
-        
-        <div className="container relative z-10 text-center px-4">
-          <h1 className="text-5xl md:text-8xl font-serif text-[#c9a961] mb-6 tracking-tighter">
-            AMARIGOM DECO
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-300 max-w-2xl mx-auto mb-10 font-light uppercase tracking-[0.2em]">
-            Cortinas de Diseño & Ambientes Exclusivos
-          </p>
-          <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <a href="#quote" className="bg-[#c9a961] text-black px-10 py-4 font-bold uppercase tracking-widest hover:bg-white transition-all">
-              Solicitar Presupuesto
-            </a>
-            <a href="#products" className="border border-[#c9a961] text-[#c9a961] px-10 py-4 font-bold uppercase tracking-widest hover:bg-[#c9a961] hover:text-black transition-all">
-              Ver Colecciones
-            </a>
-          </div>
-        </div>
-      </section>
-
+      <Hero/>
+      
       {/* About Section */}
       <section className="py-24 bg-[#0a0a0a]" id="about">
         <div className="container mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">

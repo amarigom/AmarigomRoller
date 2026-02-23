@@ -4,6 +4,7 @@ import { Cormorant_Garamond, Inter } from "next/font/google"
 import "./globals.css"
 import Header from "@/components/ui/header"
 import Footer from "@/components/ui/footer"
+import Hero from "@/components/sections/Hero"
 //import { LanguageProvider } from "@/contexts/LanguageContext"g
 //import { CartProvider } from "@/contexts/CartContext"
 
@@ -22,7 +23,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "AMARIGOM DECO - Cortinas Roller & Tradicionales",
   description: "Cortinas Roller Blackout y Sunscreen, Cortinas Tradicionales de alta calidad",
-    generator: 'v0.app'
+    
 }
 
 export default function RootLayout({
@@ -35,10 +36,10 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         {/*<LanguageProvider>
           <CartProvider>*/}
+          <main className="min-h-screen">
           <Header />
-            <main className="min-h-screen">
           {children}
-            </main>
+          </main>
           <Footer />
           {/*</CartProvider>*/}
           
