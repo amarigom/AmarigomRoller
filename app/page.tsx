@@ -107,6 +107,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       {/* Hero Section */}
       <Hero/>
       <About/>
+      <Products/>
      
       
  

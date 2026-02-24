@@ -4,7 +4,6 @@ import { Cormorant_Garamond, Inter } from "next/font/google"
 import "./globals.css"
 import Header from "@/components/ui/header"
 import Footer from "@/components/ui/footer"
-import Hero from "@/components/sections/Hero"
 //import { LanguageProvider } from "@/contexts/LanguageContext"g
 //import { CartProvider } from "@/contexts/CartContext"
 
