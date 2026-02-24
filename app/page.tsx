@@ -107,8 +107,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       {/* Hero Section */}
       <Hero/>
       <About/>
-      <Products/>
-      <Gallery/>
+     
       
  
 
@@ -199,11 +198,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 </section>
 
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-white/5 text-center">
-        <p className="text-[#c9a961] font-serif tracking-widest text-xl">AMARIGOM DECO</p>
-        <p className="text-zinc-600 text-[10px] mt-4 tracking-[0.5em] uppercase">© 2026 Andrea Roller</p>
-      </footer>
+      
 
     </div>
   );
