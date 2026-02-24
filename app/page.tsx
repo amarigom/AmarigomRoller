@@ -1,6 +1,8 @@
 "use client";
 
+import About from '@/components/sections/About';
 import Hero from '@/components/sections/Hero';
+import Products from '@/components/sections/Products';
 import React,{ useEffect, useState } from 'react';
 
 export default function Home() {
@@ -103,69 +105,10 @@ const handleSubmit = async (e: React.FormEvent) => {
       
       {/* Hero Section */}
       <Hero/>
+      <About/>
+      <Products/>
       
-      {/* About Section */}
-      <section className="py-24 bg-[#0a0a0a]" id="about">
-        <div className="container mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
-          <div className="space-y-8">
-            <h2 className="text-4xl font-serif text-[#c9a961]">Expertos en Ventanas</h2>
-            <p className="text-gray-400 leading-relaxed text-lg">
-              Somos especialistas en cortinas roller sunscreen, blackout y cortinas tradicionales. 
-              Con años de experiencia, transformamos espacios con elegancia y funcionalidad.
-              Cada proyecto es único y trabajamos con materiales de la más alta calidad para 
-              garantizar durabilidad y belleza en cada instalación.
-            </p>
-          </div>
-          <div className="border border-[#c9a961]/20 rounded-sm overflow-hidden h-[500px]">
-            <img 
-              src="images/hero-bg.jpg" 
-              alt="Showroom" 
-              className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700 "
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Product Placeholder (Donde actuará tu product.py luego) */}
-      <section className="py-24 bg-black" id="products">
-        <div className="container mx-auto px-6 text-center mb-16">
-          <h2 className="text-4xl font-serif text-[#c9a961] mb-4 tracking-widest">NUESTROS PRODUCTOS</h2>
-          <div className="w-24 h-px bg-[#c9a961] mx-auto"></div>
-        </div>
-        
-        <div className="container mx-auto px-6 grid md:grid-cols-3 gap-12">
-          {[
-            {nombre:'Sunscreen',
-              img:'images/products/sunscreen.jpg',
-              desc:'descripcion1'
-            },
-             {nombre:'Blackout',
-              img:'images/products/blackout.jpg',
-              desc:'descripcion2'},
-             {nombre:'Tradicional',
-              img:'images/products/traditional.jpg',
-              desc:'descripcion3'}
-            
-            ].map((producto) => (
-            <div key={producto.nombre} className="group border border-white/5 p-4 hover:border-[#c9a961]/50 transition-all">
-              <div className="h-80 bg-zinc-900 mb-6 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[#c9a961]/10 group-hover:bg-transparent transition-all"></div>
-                <img 
-                  src={producto.img} 
-                  alt={producto.nombre}
-                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
-                />
-                <p className="flex items-center justify-center h-full text-zinc-700 font-serif italic text-2xl">{producto.nombre}</p>
-              </div>
-              <h3 className="text-[#c9a961] text-xl font-serif mb-2 tracking-widest uppercase">{producto.nombre}</h3>
-              <p className="text-gray-500 text-sm mb-6 uppercase tracking-wider italic">{producto.desc}</p>
-              <button className="w-full border border-white/20 py-3 text-xs tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all">
-                Explorar
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
+ 
 
    <section className="py-24 bg-[#0a0a0a]" id="gallery">
   <div className="container mx-auto px-6">
