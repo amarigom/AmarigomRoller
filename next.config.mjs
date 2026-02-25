@@ -1,12 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  images: {
-    unoptimized: true,
-  },
+  /* Aquí NO debe decir output: 'export' */
 }
 
-export default nextConfig
+module.exports = nextConfig

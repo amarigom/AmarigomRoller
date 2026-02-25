@@ -14,12 +14,11 @@ export default function Hero() {
         <p className="hero-subtitle text-white text-xl md:text-2xl font-light mb-10 max-w-2xl mx-auto italic">
           CORTINAS DE DISEÑO Y AMBIENTES EXCLUSIVOS
         </p>
-        
-        <div className="hero-actions flex flex-col md:flex-row gap-4 justify-center">
+        <div className="hero-actions flex flex-col md:flex-row gap-4 justify-center ">
           {/* Botón Dorado (Cotizar) */}
           <Link 
-            href="#quote" 
-            className="bg-[#c9a961] text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-[#b39552] transition-all"
+            href="#presupuesto" 
+            className="bg-[#c9a961] text-black px-8 py-3 rounded-full font-bold uppercase tracking-widest hover:bg-[#b39552] transition-all "
           >
             Solicitar Presupuesto
           </Link>
