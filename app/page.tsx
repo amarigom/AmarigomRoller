@@ -3,6 +3,7 @@ import About from "@/components/sections/About"
 import Products from "@/components/sections/Products"
 import Gallery from "@/components/sections/Gallery"
 import QuoteForm from "@/components/sections/QuoteForm"
+import ContactSection from "@/components/sections/ContactSection"
 // No importamos Gallery ni QuoteForm por ahora para ver si arranca
 
 export default function Home() {
@@ -13,6 +14,7 @@ export default function Home() {
       <Products />
       <Gallery/>
       <QuoteForm/>
+      <ContactSection/>
     </main>
   )
 }
