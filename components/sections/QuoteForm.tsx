@@ -22,15 +22,46 @@ export default function QuoteForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setEnviando(true)
+    setMessage({ text: "" }) // Limpiamos mensajes anteriores
 
-    // Simulamos un envío (Aquí luego conectarás tu API o servicio de mail)
-    setTimeout(() => {
-      setEnviando(false)
-      setMessage({ text: "Solicitud enviada con éxito. Nos contactaremos pronto." })
-      
-      // Limpiar mensaje después de 5 segundos
-      setTimeout(() => setMessage({ text: "" }), 5000)
-    }, 2000)
+    try {
+      const API_URL = "https://amarigomroller-backend-test.onrender.com/quote/request"; 
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setEnviando(false);
+        setMessage({ text: "Cotización enviada exitosamente. Nos contactaremos pronto." });
+        
+        // Opcional: Limpiar el formulario
+        setFormData({
+          email: "",
+          color: "",
+          width: "",
+          height: "",
+          fabric_type: "blackout",
+          quality: "premium",
+          observations: ""
+        });
+      } else {
+        throw new Error(result.error || result.message || "Error en el servidor");
+      }
+    } catch (error) {
+      setEnviando(false);
+      console.error("Error al enviar:", error);
+      setMessage({ text: "Error al enviar la solicitud. Intente nuevamente." });
+    } finally {
+      // Limpiar mensaje después de 5 segundos, pase lo que pase
+      setTimeout(() => setMessage({ text: "" }), 5000);
+    }
   }
 
   return (
@@ -47,18 +78,18 @@ export default function QuoteForm() {
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Email */}
             <input 
               type="email" 
               placeholder="Tu Email" 
               required
+              value={formData.email}
               className="bg-zinc-900 p-3 text-white outline-none hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(201,169,97,0.2)] transition-all border border-transparent focus:border-[#c9a961]/50"
               onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
-            {/* Color */}
             <input 
               type="text" 
               placeholder="Color deseado (opcional)"
+              value={formData.color}
               className="bg-zinc-900 p-3 text-white outline-none hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(201,169,97,0.2)] transition-all border border-transparent focus:border-[#c9a961]/50"
               onChange={(e) => setFormData({...formData, color: e.target.value})}
             />
@@ -68,17 +99,20 @@ export default function QuoteForm() {
             <input 
               type="number" 
               placeholder="Ancho" 
+              value={formData.width}
               className="bg-zinc-900 p-3 text-center text-white outline-none hover:scale-[1.05] transition-all" 
               onChange={(e) => setFormData({...formData, width: e.target.value})}
             />
             <input 
               type="number" 
               placeholder="Alto" 
+              value={formData.height}
               className="bg-zinc-900 p-3 text-center text-white outline-none hover:scale-[1.05] transition-all" 
               onChange={(e) => setFormData({...formData, height: e.target.value})}
             />
             
             <select 
+              value={formData.fabric_type}
               className="bg-zinc-900 p-3 text-white outline-none cursor-pointer" 
               onChange={(e) => setFormData({...formData, fabric_type: e.target.value})}
             >
@@ -88,6 +122,7 @@ export default function QuoteForm() {
             </select>
 
             <select 
+              value={formData.quality}
               className="bg-zinc-900 p-3 text-white outline-none cursor-pointer" 
               onChange={(e) => setFormData({...formData, quality: e.target.value})}
             >
@@ -99,11 +134,11 @@ export default function QuoteForm() {
 
           <textarea 
             placeholder="Observaciones" 
+            value={formData.observations}
             className="w-full bg-zinc-900 p-3 h-24 text-white outline-none hover:border-[#c9a961]/30 border border-transparent transition-all"
             onChange={(e) => setFormData({...formData, observations: e.target.value})}
           />
 
-          {/* Mensaje en color HUESO */}
           <div className="h-4 text-center">
             {message.text && (
               <p className="text-[#f5f5dc] text-xs uppercase tracking-[0.2em] animate-pulse">
@@ -124,17 +159,7 @@ export default function QuoteForm() {
               }
             `}
           >
-            {enviando ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4 text-zinc-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Procesando...
-              </span>
-            ) : (
-              'Solicitar Presupuesto'
-            )}
+            {enviando ? 'Procesando...' : 'Solicitar Presupuesto'}
           </button>
         </form> 
       </div>
