@@ -2,6 +2,7 @@ import Hero from "@/components/sections/Hero"
 import About from "@/components/sections/About"
 import Products from "@/components/sections/Products"
 import Gallery from "@/components/sections/Gallery"
+import QuoteForm from "@/components/sections/QuoteForm"
 // No importamos Gallery ni QuoteForm por ahora para ver si arranca
 
 export default function Home() {
@@ -11,6 +12,7 @@ export default function Home() {
       <About />
       <Products />
       <Gallery/>
+      <QuoteForm/>
     </main>
   )
 }
