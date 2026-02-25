@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* Aquí NO debe decir output: 'export' */
-}
+  // Aquí podés agregar configuraciones si las necesitás,
+  // pero por ahora dejalo vacío para que no falle.
+};
 
-module.exports = nextConfig
+export default nextConfig; // <-- Esto es lo que cambia
