@@ -1,4 +1,4 @@
-"use client" // <--- ¡ESTO ES VITAL! Sin esto, el carrusel no se mueve.
+"use client" 
 
 import { useState } from "react"
 
