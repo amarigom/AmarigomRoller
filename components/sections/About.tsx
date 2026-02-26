@@ -23,8 +23,15 @@ export default function About() {
           <img 
             src="/images/hero-bg.jpg" 
             alt="Showroom Amarigom Deco" 
-            className="w-full h-full object-cover object-center transition-all duration-700
-              grayscale-0 md:grayscale md:hover:grayscale-0"
+            className="w-full h-full object-cover transition-all duration-700
+      
+      /* ESTO ES LO IMPORTANTE */
+      object-left       /* Centrado a la IZQUIERDA en Celulares (Mobile first) */
+      md:object-center  /* Centrado en el MEDIO en Computadoras */
+      
+      grayscale-0       /* Color total en móvil */
+      md:grayscale      /* Blanco y negro solo en computadoras */
+      md:hover:grayscale-0"
             /* object-center: Asegura que la imagen esté centrada.
                grayscale-0: Color total en móvil.
                md:grayscale: Blanco y negro solo en computadoras.
