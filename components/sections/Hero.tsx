@@ -3,7 +3,7 @@ import Link from "next/link"
 export default function Hero() {
   return (
     <section className="hero relative min-h-screen flex items-center justify-center overflow-hidden" id="home">
-      {/* Fondo y Overlay - Estas clases deben estar en tu globals.css '/images/hero-bg.jpg' */}
+      {/* Fondo y Overlay - Estas clases deben estar en tu globals.css '/images/hero-bg.jpg' '/images/tela-screen.jpg'*/}
       <div className="hero-background absolute inset-0 bg-[url('/images/tela-screen.jpg')] bg-cover bg-center opacity-40" />
       <div className="hero-overlay absolute inset-0 bg-gradient-to-r from-black/90 via-black/20 to-transparent"  />
       

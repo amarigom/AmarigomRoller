@@ -6,7 +6,7 @@ const PRODUCTOS_DATA = [
   },
   {
     nombre: 'Blackout',
-    img: '/images/products/blackout.jpg',
+    img: '/images/products/bk1.jpg',
     desc: 'Privacidad y oscuridad total'
   },
   {
