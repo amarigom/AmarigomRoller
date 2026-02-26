@@ -1,8 +1,22 @@
-"use client" // Esto permite que los botones funcionen
+"use client"
 
+import { useState } from "react"
 import Link from "next/link"
+import { Instagram, MessageCircle, ShoppingCart, Menu, X } from "lucide-react"
+import { useIsMobile } from "@/hooks/use-mobile" // Usamos tu hook
 
 export default function Header() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const isMobile = useIsMobile()
+
+  const navLinks = [
+    { name: "Nosotros", href: "#about" },
+    { name: "Productos", href: "#products" },
+    { name: "Galería", href: "#gallery" },
+    { name: "Contacto", href: "#contact" },
+    { name: "Presupuesto", href: "#presupuesto" },
+  ]
+
   return (
     <header className="header sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-md border-b border-[#c9a961]/20 py-4">
       <div className="container mx-auto px-4">
@@ -10,51 +24,82 @@ export default function Header() {
           
           {/* Logo */}
           <div className="logo">
-            <h1 className="text-[#c9a961] text-2xl font-serif font-bold tracking-widest">
-              AMARIGOM DECO
-            </h1>
+            <Link href="/">
+              <h1 className="text-[#c9a961] text-xl md:text-2xl font-serif font-bold tracking-widest cursor-pointer">
+                AMARIGOM DECO
+              </h1>
+            </Link>
           </div>
           
           {/* Navegación Desktop */}
           <nav className="hidden md:flex space-x-8 text-sm uppercase tracking-wider text-[#c4c4b8]">
-            <Link href="#about" className="hover:text-[#c9a961] transition-colors">Nosotros</Link>
-            <Link href="#products" className="hover:text-[#c9a961] transition-colors">Productos</Link>
-            <Link href="#gallery" className="hover:text-[#c9a961] transition-colors">Galería</Link>
-            <Link href="#contact" className="hover:text-[#c9a961] transition-colors">Contacto</Link>
+            {navLinks.map((link) => (
+              <Link 
+                key={link.name} 
+                href={link.href} 
+                className="hover:text-[#c9a961] transition-colors"
+              >
+                {link.name}
+              </Link>
+            ))}
           </nav>
           
-          {/* Acciones (Idioma, Redes, Carrito) */}
-          <div className="flex items-center space-x-5">
+          {/* Acciones */}
+          <div className="flex items-center space-x-2 md:space-x-5">
             
-            {/* Redes Sociales */}
-            <div className="flex space-x-4 border-r border-gray-700 pr-4">
-              <a href="https://wa.me/5492494630750" target="_blank" className="text-[#c4c4b8] hover:text-[#c9a961]">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                </svg>
+            {/* Redes Sociales (Ocultas en mobile muy pequeño si es necesario) */}
+            <div className="hidden sm:flex space-x-4 border-r border-gray-700 pr-4">
+              <a href="https://wa.me/5492494630750" target="_blank" className="text-[#c4c4b8] hover:text-[#c9a961] transition-colors">
+                <MessageCircle size={20} />
               </a>
-              <a href="https://instagram.com/amarigom/" target="_blank" className="text-[#c4c4b8] hover:text-[#c9a961]">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                </svg>
+              <a href="https://instagram.com/amarigom/" target="_blank" className="text-[#c4c4b8] hover:text-[#c9a961] transition-colors">
+                <Instagram size={20} />
               </a>
             </div>
 
             {/* Carrito */}
             <button className="relative text-[#c9a961] p-2 hover:bg-white/5 rounded-full transition-all">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="9" cy="21" r="1"></circle>
-                <circle cx="20" cy="21" r="1"></circle>
-                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-              </svg>
+              <ShoppingCart size={22} />
               <span className="absolute top-0 right-0 bg-white text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-black">
                 0
               </span>
             </button>
+
+            {/* Botón Menú Móvil (Solo visible en mobile) */}
+            <button 
+              className="md:hidden text-[#c9a961] p-2"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
+            </button>
           </div>
         </div>
+
+        {/* Menú Móvil Desplegable */}
+        {isMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 w-full bg-[#0a0a0a] border-b border-[#c9a961]/20 py-6 px-4 animate-in fade-in slide-in-from-top-5">
+            <nav className="flex flex-col space-y-6 text-center">
+              {navLinks.map((link) => (
+                <Link 
+                  key={link.name} 
+                  href={link.href} 
+                  onClick={() => setIsMenuOpen(false)}
+                  className="text-[#c4c4b8] text-lg uppercase tracking-widest hover:text-[#c9a961]"
+                >
+                  {link.name}
+                </Link>
+              ))}
+              <div className="flex justify-center space-x-8 pt-4 border-t border-white/5">
+                <a href="https://wa.me/5492494630750" target="_blank" className="text-[#c9a961]">
+                  <MessageCircle size={24} />
+                </a>
+                <a href="https://instagram.com/amarigom/" target="_blank" className="text-[#c9a961]">
+                  <Instagram size={24} />
+                </a>
+              </div>
+            </nav>
+          </div>
+        )}
       </div>
     </header>
   )

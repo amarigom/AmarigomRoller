@@ -7,6 +7,10 @@ import Footer from "@/components/ui/footer"
 //import { LanguageProvider } from "@/contexts/LanguageContext"g
 //import { CartProvider } from "@/contexts/CartContext"
 
+import { Toaster } from "@/components/ui/toaster" // o la ruta donde esté tu componente de toast
+
+
+
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600"],
@@ -31,18 +35,22 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" className={`${cormorant.variable} ${inter.variable}`}>
-      <body className="font-sans antialiased">
-        {/*<LanguageProvider>
-          <CartProvider>*/}
-          <main className="min-h-screen">
+    <html lang="es" className={`${cormorant.variable} ${inter.variable} scroll-smooth`}>
+      <body className="font-sans antialiased bg-black text-white">
+        {/* El wrapper principal */}
+        <div className="flex flex-col min-h-screen">
           <Header />
-          {children}
-          </main>
-          <Footer />
-          {/*</CartProvider>*/}
           
-        
+          {/* El contenido crece para empujar el footer abajo si hay poco texto */}
+          <main className="flex-grow">
+            {children}
+          </main>
+
+          <Footer />
+        </div>
+
+        {/* Componente de Radix para las notificaciones (Toasts) */}
+        <Toaster />
       </body>
     </html>
   )
