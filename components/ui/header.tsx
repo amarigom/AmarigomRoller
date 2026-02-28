@@ -10,11 +10,11 @@ export default function Header() {
   const isMobile = useIsMobile()
 
   const navLinks = [
-    { name: "Nosotros", href: "#about" },
-    { name: "Productos", href: "#products" },
-    { name: "Galería", href: "#gallery" },
-    { name: "Contacto", href: "#contact" },
-    { name: "Presupuesto", href: "#presupuesto" },
+    { name: "Nosotros", href: "/#about" },
+    { name: "Productos", href: "/#products" },
+    { name: "Galería", href: "/#gallery" },
+    { name: "Contacto", href: "/#contact" },
+    { name: "Presupuesto", href: "/#presupuesto" },
   ]
 
   return (

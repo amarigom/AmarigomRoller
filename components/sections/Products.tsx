@@ -1,3 +1,4 @@
+import Link from 'next/link';
 const PRODUCTOS_DATA = [
   {
     nombre: 'Sunscreen',
@@ -50,9 +51,13 @@ export default function Products() {
               {producto.desc}
             </p>
             
-            <button className="w-full border border-white/20 py-3 text-[10px] tracking-[0.3em] uppercase hover:bg-[#c9a961] hover:border-[#c9a961] hover:text-black transition-all duration-300">
-              Explorar
-            </button>
+            
+<Link 
+             href={`/products/${producto.nombre.toLowerCase()}`} 
+            className="bg-black text-white px-4 py-2 rounded"
+          >
+             Explorar
+</Link>
           </div>
         ))}
       </div>

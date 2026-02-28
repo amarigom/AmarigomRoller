@@ -13,7 +13,7 @@ if app.config['MAIL_ENABLED']:
     app.mail = mail
 else:
     app.mail = None
-    print("⚠️  AVISO: Email no configurado. Las cotizaciones se guardarán pero no se enviarán por email.")
+    print(" AVISO: Email no configurado. Las cotizaciones se guardarán pero no se enviarán por email.")
 
 # Importar blueprints (rutas modulares)
 from routes.main import main_bp
