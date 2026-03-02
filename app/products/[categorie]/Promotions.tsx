@@ -84,7 +84,7 @@ export default function Promotions({ lang = "es" }: { lang?: "es" | "en" }) {
 
               {/* CUERPO DE TEXTO (Ahora fuera del marco de la imagen) */}
               <div className="p-8 flex flex-col flex-grow">
-                <h3 className="text-xl font-serif font-bold mb-4 text-[#c9a961] tracking-widest uppercase leading-tight h-14">
+                <h3 className="text-xl font-serif font-bold mb-12 text-[#c9a961] tracking-widest uppercase leading-tight h-14">
                   {promo.title[lang]}
                 </h3>
                 
