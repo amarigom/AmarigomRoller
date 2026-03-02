@@ -48,7 +48,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom mt-12 pt-8 border-t border-gray-800 text-center text-xs text-gray-500">
-          <p>&copy; 2025 AMARIGOM DECO. Todos los derechos reservados.</p>
+          <p>&copy; 2026 AMARIGOM DECO. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>
