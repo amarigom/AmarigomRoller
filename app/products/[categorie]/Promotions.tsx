@@ -5,9 +5,9 @@ const promotions = [
   {
     id: 101,
     badge: "-25%",
-    title: { es: "Cortinas tradicionales Blackout y voile texturado o gasa", en: "Traditional Blackout & Voile" },
+    title: { es: "Cortina roller Blackout + cortina tradicional voile texturado", en: "Traditional Blackout + Voile" },
     description: {
-      es: "Cortinas de 2 paños. Cada paño de 1,5 m de ancho x 2,10 m de alto",
+      es: "Cortina voile de 2 paños. Cada paño de 1,5 m de ancho x 2,10 m de alto. Cortina roller blackout de 1,5 m x 1,5 m",
       en: "2 traditional blinds up to 1.5m x 2.1m",
     },
     oldPrice: "$305.000",
@@ -17,7 +17,7 @@ const promotions = [
   {
     id: 102,
     badge: "-30%",
-    title: { es: "Roller Blackout Premium y Sunscreen", en: "Roller Blackout Premium & Sunscreen" },
+    title: { es: "Roller Blackout Premium + roller Sunscreen", en: "Roller Blackout Premium + roller Sunscreen" },
     description: {
       es: "Cortina blackout premium 1,5 m x 1,5 m + cortina sunscreen 1,5 m x 1,5 m",
       en: "Premium blackout 1.5m x 1.5m + sunscreen 1.5m x 1.5m",
@@ -25,6 +25,18 @@ const promotions = [
     oldPrice: "$350.000",
     newPrice: "$245.000",
     image: '/images/products/suns-bck-roller.png',
+  },
+  {
+    id: 103,
+    badge: "-25%",
+    title: { es: "Cortina tradicionales Blackout +  voile texturado", en: "Traditional Blackout + Voile" },
+    description: {
+      es: "2 Cortinas de 2 paños. Cada paño de 1,5 m de ancho x 2,10 m de alto",
+      en: "2 traditional blinds up to 1.5m x 2.1m",
+    },
+    oldPrice: "$305.000",
+    newPrice: "$260.000",
+    image: '/images/products/trad-bck-trad-voile.jpg', 
   },
 ]
 
@@ -41,10 +53,10 @@ export default function Promotions({ lang = "es" }: { lang?: "es" | "en" }) {
       <div className="container mx-auto px-4">
         
         <h2 className="text-3xl md:text-4xl font-serif font-bold mb-12 text-[#c9a961] tracking-[0.3em] uppercase text-center">
-          {lang === "es" ? "Promociones Especiales" : "Special Offers"}
+          {lang === "es" ? "Promociones: Sets de Diseño" : "Special Offers"}
         </h2>
 
-        <div className="grid md:grid-cols-2 gap-10 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-10 max-w-6xl mx-auto">
           {promotions.map((promo) => (
             <div 
               key={promo.id} 
