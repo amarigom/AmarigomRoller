@@ -38,7 +38,7 @@ export default function Footer() {
             <h4 className="font-bold mb-4">Contacto</h4>
             <div className="flex gap-4 mb-4">
               <a href="https://wa.me/5492494630750" target="_blank" className="text-[#c9a961] hover:underline">WhatsApp</a>
-              <a href="https://instagram.com/amarigom.deco" target="_blank" className="text-[#c9a961] hover:underline">Instagram</a>
+              <a href="https://instagram.com/amarigom" target="_blank" className="text-[#c9a961] hover:underline">Instagram</a>
             </div>
             <p className="text-sm text-[#c4c4b8]">
               Andrea Marigomez<br />

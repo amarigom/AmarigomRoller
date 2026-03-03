@@ -60,7 +60,7 @@ export default function Promotions({ lang = "es" }: { lang?: "es" | "en" }) {
           {promotions.map((promo) => (
             <div 
               key={promo.id} 
-              className="group relative border border-[#c9a961]/30 rounded-none overflow-hidden bg-black hover:border-[#c9a961]/60 transition-all duration-500 flex flex-col h-full"
+              className="group relative border border-transparent rounded-none overflow-hidden bg-black hover:border-[#c9a961]/60 transition-all duration-500 flex flex-col h-full"
             >
               {/* Badge */}
               <div className="absolute top-2 right-2 z-10 bg-[#c9a961] text-black px-3 py-1 font-bold tracking-tighter text-xs">
@@ -68,16 +68,22 @@ export default function Promotions({ lang = "es" }: { lang?: "es" | "en" }) {
               </div>
 
               {/* CONTENEDOR MARCO (Zinc 900) */}
-              <div className="h-72 bg-zinc-900 relative overflow-hidden p-6 border-b border-[#c9a961]/10">
+              <div className="h-72 bg-zinc-900 relative overflow-hidden p-6 border-none border-[#c9a961]/10">
                 <div className="relative h-full w-full overflow-hidden">
+                  {/* Overlay: En móvil es transparente, en Desktop es oscuro y aclara al hover */}
+              <div className="absolute inset-0 bg-transparent md:bg-black/40 md:group-hover:bg-transparent transition-all z-10"></div>
                   <Image
                     src={promo.image}
                     alt={promo.title[lang]}
                     fill
                     className="object-cover transition-all duration-700 
-                               grayscale group-hover:grayscale-0 
-                               opacity-80 group-hover:opacity-100 
-                               group-hover:scale-110"
+                               /* COLOR EN CELULAR, GRIS EN PC */
+                                grayscale-0 md:grayscale 
+                              /* AL PASAR EL MOUSE EN PC, VUELVE EL COLOR */
+                                md:group-hover:grayscale-0 
+                                opacity-100 md:opacity-80 
+                                md:group-hover:opacity-100 
+                                group-hover:scale-110"
                   />
                 </div>
               </div>
