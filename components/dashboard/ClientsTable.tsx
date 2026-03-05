@@ -9,7 +9,7 @@
 
 import { useState } from "react"
 import { Search, Users, MapPin, Mail, Phone } from "lucide-react"
-import type { Client, ClientStatus } from "@/lib/types/dashboard"
+import type { Client, ClientStatus } from "@/lib/types/dashboards"
 import { cn } from "@/lib/utils"
 
 interface ClientsTableProps {
