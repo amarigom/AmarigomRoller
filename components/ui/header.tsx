@@ -32,7 +32,7 @@ export default function Header() {
           </div>
           
           {/* Navegación Desktop */}
-          <nav className="hidden md:flex space-x-8 text-sm uppercase tracking-wider text-[#c4c4b8]">
+          <nav className="hidden lg:flex space-x-8 text-sm uppercase tracking-wider text-[#c4c4b8]">
             {navLinks.map((link) => (
               <Link 
                 key={link.name} 
@@ -48,7 +48,7 @@ export default function Header() {
           <div className="flex items-center space-x-2 md:space-x-5">
             
             {/* Redes Sociales (Ocultas en mobile muy pequeño si es necesario) */}
-            <div className="hidden sm:flex space-x-4 border-r border-gray-700 pr-4">
+            <div className="hidden xl:flex space-x-4 border-r border-gray-700 pr-4">
               <a href="https://wa.me/5492494630750" target="_blank" className="text-[#c4c4b8] hover:text-[#c9a961] transition-colors">
                 <MessageCircle size={20} />
               </a>
@@ -67,7 +67,7 @@ export default function Header() {
 
             {/* Botón Menú Móvil (Solo visible en mobile) */}
             <button 
-              className="md:hidden text-[#c9a961] p-2"
+              className="lg:hidden text-[#c9a961] p-2"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X size={28} /> : <Menu size={28} />}
@@ -77,7 +77,7 @@ export default function Header() {
 
         {/* Menú Móvil Desplegable */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-[#0a0a0a] border-b border-[#c9a961]/20 py-6 px-4 animate-in fade-in slide-in-from-top-5">
+          <div className="lg:hidden absolute top-full left-0 w-full bg-[#0a0a0a] border-b border-[#c9a961]/20 py-6 px-4 animate-in fade-in slide-in-from-top-5">
             <nav className="flex flex-col space-y-6 text-center">
               {navLinks.map((link) => (
                 <Link 

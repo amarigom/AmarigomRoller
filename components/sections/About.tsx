@@ -19,13 +19,16 @@ export default function About() {
         </div>
 
         {/* Lado de la Imagen */}
-        <div className="border border-[#c9a961]/20 rounded-sm overflow-hidden h-[350px] md:h-[500px] w-full">
+        <div className="border border-[#c9a961]/20 rounded-sm overflow-hidden 
+        h-[400px] 
+        md:h-[600px] 
+        w-full relative">
           <img 
             src="/images/hero-bg.jpg" 
             alt="Showroom Amarigom Deco" 
-            className="w-full h-full object-cover transition-all duration-700
+            className="w-full h-full transition-all duration-700
       
-      
+      object-cover
       object-right       
       lg:object-center  
       
