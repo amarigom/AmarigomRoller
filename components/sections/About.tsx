@@ -27,14 +27,14 @@ export default function About() {
       
       
       object-right       
-      md:object-center  
+      lg:object-center  
       
       grayscale-0       
-      md:grayscale      
-      md:hover:grayscale-0"
+      lg:grayscale      
+      lg:hover:grayscale-0"
             /* object-center: Asegura que la imagen esté centrada.
                grayscale-0: Color total en móvil.
-               md:grayscale: Blanco y negro solo en computadoras.
+               lg:grayscale: Blanco y negro solo en computadoras.
             */
           />
         </div>

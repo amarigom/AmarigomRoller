@@ -5,37 +5,37 @@ const promotions = [
   {
     id: 101,
     badge: "-25%",
-    title: { es: "Cortina roller Blackout + cortina tradicional voile texturado", en: "Traditional Blackout + Voile" },
+    title: { es: "Roller + tradicional", en: "Traditional Blackout + Voile" },
     description: {
       es: "Cortina voile de 2 paños. Cada paño de 1,5 m de ancho x 2,10 m de alto. Cortina roller blackout de 1,5 m x 1,5 m",
       en: "2 traditional blinds up to 1.5m x 2.1m",
     },
-    oldPrice: "$305.000",
-    newPrice: "$260.000",
+    oldPrice: "desde $305.000",
+    newPrice: "desde $260.000",
     image: '/images/products/gasa-bck.png', 
   },
   {
     id: 102,
     badge: "-30%",
-    title: { es: "Roller Blackout Premium + roller Sunscreen", en: "Roller Blackout Premium + roller Sunscreen" },
+    title: { es: "Roller Blackout + Sunscreen", en: "Roller Blackout + Sunscreen" },
     description: {
       es: "Cortina blackout premium 1,5 m x 1,5 m + cortina sunscreen 1,5 m x 1,5 m",
       en: "Premium blackout 1.5m x 1.5m + sunscreen 1.5m x 1.5m",
     },
-    oldPrice: "$350.000",
-    newPrice: "$245.000",
+    oldPrice: "desde $350.000",
+    newPrice: "desde $245.000",
     image: '/images/products/suns-bck-roller.png',
   },
   {
     id: 103,
     badge: "-25%",
-    title: { es: "Cortina tradicionales Blackout +  voile texturado", en: "Traditional Blackout + Voile" },
+    title: { es: "Tradicionales Blackout + voile texturado", en: "Traditional Blackout + Voile" },
     description: {
       es: "2 Cortinas de 2 paños. Cada paño de 1,5 m de ancho x 2,10 m de alto",
       en: "2 traditional blinds up to 1.5m x 2.1m",
     },
-    oldPrice: "$305.000",
-    newPrice: "$260.000",
+    oldPrice: " desde $305.000",
+    newPrice: " desde $260.000",
     image: '/images/products/trad-bck-trad-voile.jpg', 
   },
 ]
@@ -63,7 +63,7 @@ export default function Promotions({ lang = "es" }: { lang?: "es" | "en" }) {
               className="group relative border border-transparent rounded-none overflow-hidden bg-black hover:border-[#c9a961]/60 transition-all duration-500 flex flex-col h-full"
             >
               {/* Badge */}
-              <div className="absolute top-2 right-2 z-10 bg-[#c9a961] text-black px-3 py-1 font-bold tracking-tighter text-xs">
+              <div className="absolute top-2 right-2 z-20 bg-[#c9a961] text-black px-3 py-1 font-bold tracking-tighter text-xs">
                 {promo.badge}
               </div>
 
@@ -90,7 +90,7 @@ export default function Promotions({ lang = "es" }: { lang?: "es" | "en" }) {
 
               {/* CUERPO DE TEXTO (Ahora fuera del marco de la imagen) */}
               <div className="p-8 flex flex-col flex-grow">
-                <h3 className="text-xl font-serif font-bold mb-12 text-[#c9a961] tracking-widest uppercase leading-tight h-14">
+                <h3 className="text-xl font-serif font-bold mb-6 text-[#c9a961] tracking-widest uppercase leading-tight h-14">
                   {promo.title[lang]}
                 </h3>
                 

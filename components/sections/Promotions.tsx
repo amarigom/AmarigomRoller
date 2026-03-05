@@ -18,7 +18,7 @@ export default function Products() {
     <section className="py-24 bg-black" id="products">
       <div className="container mx-auto px-6 text-center mb-16">
         <h2 className="text-3xl md:text-4xl font-serif text-[#c9a961] mb-4 tracking-widest uppercase">
-          Nuestros Pro
+          Nuestros Productos
         </h2>
         <div className="w-24 h-px bg-[#c9a961] mx-auto"></div>
       </div>
