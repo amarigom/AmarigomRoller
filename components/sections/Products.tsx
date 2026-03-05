@@ -33,13 +33,13 @@ export default function Products() {
             <div className="h-80 bg-zinc-900 mb-6 relative overflow-hidden">
               
               {/* Overlay: En móvil es transparente, en Desktop es oscuro y aclara al hover */}
-              <div className="absolute inset-0 bg-transparent md:bg-black/40 md:group-hover:bg-transparent transition-all z-10"></div>
+              <div className="absolute inset-0 bg-transparent lg:bg-black/40 lg:group-hover:bg-transparent transition-all z-10"></div>
               
               <img 
                 src={producto.img} 
                 alt={producto.nombre}
                 className="w-full h-full object-cover transition-all duration-1000 
-                  grayscale-0 md:grayscale md:group-hover:grayscale-0 md:group-hover:scale-110"
+                  grayscale-0 lg:grayscale lg:group-hover:grayscale-0 lg:group-hover:scale-110"
                 /* ↑ grayscale-0 por defecto (móvil), grayscale solo en computadoras (md) */
               />
             </div>
