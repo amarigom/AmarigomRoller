@@ -71,18 +71,18 @@ export default function Promotions({ lang = "es" }: { lang?: "es" | "en" }) {
               <div className="h-72 bg-zinc-900 relative overflow-hidden p-6 border-none border-[#c9a961]/10">
                 <div className="relative h-full w-full overflow-hidden">
                   {/* Overlay: En móvil es transparente, en Desktop es oscuro y aclara al hover */}
-              <div className="absolute inset-0 bg-transparent md:bg-black/40 md:group-hover:bg-transparent transition-all z-10"></div>
+              <div className="absolute inset-0 bg-transparent lg:bg-black/40 lg:group-hover:bg-transparent transition-all z-10"></div>
                   <Image
                     src={promo.image}
                     alt={promo.title[lang]}
-                    fill
+                    fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover transition-all duration-700 
                                /* COLOR EN CELULAR, GRIS EN PC */
-                                grayscale-0 md:grayscale 
+                                grayscale-0 lg:grayscale 
                               /* AL PASAR EL MOUSE EN PC, VUELVE EL COLOR */
-                                md:group-hover:grayscale-0 
-                                opacity-100 md:opacity-80 
-                                md:group-hover:opacity-100 
+                                lg:group-hover:grayscale-0 
+                                opacity-100 lg:opacity-80 
+                                lg:group-hover:opacity-100 
                                 group-hover:scale-110"
                   />
                 </div>
