@@ -8,7 +8,7 @@
  */
 
 import { Package, Users, Calculator, ClipboardList, ChevronLeft, ChevronRight } from "lucide-react"
-import type { DashboardView } from "@/lib/types/dashboard"
+import type { DashboardView } from "@/lib/types/dashboards"
 import { cn } from "@/lib/utils"
 
 interface SidebarProps {

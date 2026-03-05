@@ -9,7 +9,7 @@
 
 import { useState } from "react"
 import { ClipboardList, Calendar, User, FileText } from "lucide-react"
-import type { Order, OrderStatus } from "@/lib/types/dashboard"
+import type { Order, OrderStatus } from "@/lib/types/dashboards"
 import { cn, formatPrice } from "@/lib/utils"
 
 interface OrdersViewProps {

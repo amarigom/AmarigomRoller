@@ -12,7 +12,7 @@
 
 import { useState, useMemo } from "react"
 import { Calculator, Scissors, AlertTriangle, Check } from "lucide-react"
-import type { FabricRoll, CuttingCalculation } from "@/lib/types/dashboard"
+import type { FabricRoll, CuttingCalculation } from "@/lib/types/dashboards"
 import { cn, formatPrice } from "@/lib/utils"
 
 interface CuttingCalculatorProps {

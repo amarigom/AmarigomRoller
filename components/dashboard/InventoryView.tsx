@@ -10,7 +10,7 @@
 
 import { useState } from "react"
 import { Package, Filter } from "lucide-react"
-import type { FabricRoll, FabricType, StockStatus } from "@/lib/types/dashboard"
+import type { FabricRoll, FabricType, StockStatus } from "@/lib/types/dashboards"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/utils"
 
