@@ -1,28 +1,29 @@
 export default function About() {
   return (
   <section className="py-20 md:py-24 bg-[#0a0a0a]" id="about">
-    <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-20 items-center">
+    {/* Cambiamos el grid para que solo sea 2 columnas en pantallas grandes (lg) */}
+    <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
       
-      {/* Lado del Texto - En Tablet ocupa 5 columnas y en PC 6 */}
-      <div className="space-y-6 md:space-y-8 text-center md:text-left md:col-span-5 lg:col-span-6 order-1">
-        <h2 className="text-3xl md:text-4xl font-serif text-[#c9a961] tracking-wide">
+      {/* Lado del Texto - Centrado en móvil y tablet, alineado a la izquierda en PC */}
+      <div className="space-y-6 md:space-y-8 text-center lg:text-left max-w-3xl mx-auto lg:mx-0">
+        <h2 className="text-3xl md:text-5xl font-serif text-[#c9a961] tracking-wide">
           Expertos en Ventanas
         </h2>
-        <p className="text-gray-400 leading-relaxed text-base md:text-lg">
+        <p className="text-gray-400 leading-relaxed text-base md:text-xl">
           Somos especialistas en cortinas roller sunscreen, blackout y cortinas tradicionales. 
           Con años de experiencia, transformamos espacios con elegancia y funcionalidad.
           Cada proyecto es único y trabajamos con materiales de la más alta calidad para 
           garantizar durabilidad y belleza en cada instalación.
         </p>
         
-        <div className="w-20 h-px bg-[#c9a961] mx-auto md:mx-0"></div>
+        <div className="w-20 h-px bg-[#c9a961] mx-auto lg:mx-0"></div>
       </div>
 
-      {/* Lado de la Imagen - En Tablet ocupa 7 columnas para acercarse al texto y mostrar más logo */}
-      <div className="md:col-span-7 lg:col-span-6 order-2">
+      {/* Lado de la Imagen - Ahora abajo en tablet, ocupando todo el ancho */}
+      <div className="w-full max-w-4xl mx-auto lg:max-w-none">
         <div className="border border-[#c9a961]/20 rounded-sm overflow-hidden 
-          h-[400px] 
-          md:h-[550px] 
+          h-[350px] 
+          md:h-[500px] 
           lg:h-[600px] 
           w-full relative">
           <img 
@@ -30,8 +31,8 @@ export default function About() {
             alt="Showroom Amarigom Deco" 
             className="w-full h-full transition-all duration-700
               object-cover
-              /* Ajuste de posición: 85% para que el logo respire y no se pegue al borde */
-              object-[85%_center] 
+              /* En tablet y móvil centramos la imagen porque ya tenemos ancho de sobra */
+              object-center 
               lg:object-center  
               
               grayscale-0       
