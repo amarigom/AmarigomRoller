@@ -8,14 +8,21 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     
     # Configuración de Flask-Mail para envío de cotizaciones
-    MAIL_SERVER = os.environ.get('MAIL_SERVER')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT',587))
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'amarigomdeco@gmail.com'
+    MAIL_SERVER ='smtp.gmail.com'
+    #os.environ.get('MAIL_SERVER')
+    MAIL_PORT =587
+    #int(os.environ.get('MAIL_PORT',587))
+    MAIL_USE_TLS =True
+    #os.environ.get('MAIL_USE_TLS', 'True') == 'True'
+    MAIL_USERNAME ='amarigomdeco@gmail.com'
+    #os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD ='odfxdjynvjoroaho'
+    #os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER ='amarigomdeco@gmail.com'
+    #os.environ.get('MAIL_DEFAULT_SENDER') or 'amarigomdeco@gmail.com'
     
-    MAIL_ENABLED = bool(MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD)
+    MAIL_ENABLED =True 
+    #bool(MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD)
     
     # Configuración de sesión
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)

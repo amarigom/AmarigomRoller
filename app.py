@@ -1,9 +1,11 @@
 from flask import Flask, render_template, request, jsonify, session
 from config import Config
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
+CORS(app)
 
 if app.config['MAIL_ENABLED']:
     from flask_mail import Mail
@@ -11,7 +13,7 @@ if app.config['MAIL_ENABLED']:
     app.mail = mail
 else:
     app.mail = None
-    print("⚠️  AVISO: Email no configurado. Las cotizaciones se guardarán pero no se enviarán por email.")
+    print(" AVISO: Email no configurado. Las cotizaciones se guardarán pero no se enviarán por email.")
 
 # Importar blueprints (rutas modulares)
 from routes.main import main_bp

@@ -1,0 +1,23 @@
+[33m3dcf75a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/nextjs-amarigom[m[33m, [m[1;31morigin/feature/nextjs-amarigom[m[33m)[m erro1
+[33m85ff6af[m Fix: upgrade next to 15.1.9 for React2Shell patch
+[33mfbdabfc[m probando cambiar version de next
+[33m1f3d5e9[m creando el static Site en Render, modificando next.config
+[33m2ba75a0[m cabiamos la logica para incorporar Resend
+[33maaf1e6b[m agregando en translation
+[33m919df56[m agregando gunicorn
+[33ma18abb7[m Agregando flask-cors a los requerimientos
+[33mc7ae7b0[m Limpieza: dejando de rastrear carpeta .next
+[33m9056491[m Separando la logica de lo visual REACT/PYTHON
+[33me7acf60[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m Estado actual de la pagina AMARIGOM
+[33m05cbc8f[m arreglando color de checkbox
+[33mfb1f2e1[m modificando global.css para que no se pisen los estilos
+[33m6a96659[m probando cambios en toast
+[33m19b3d88[m correccion
+[33mc4c3f7b[m correcciones de correo y recibir un string en vez de un diccionario en el metodo de email_resend
+[33mf680e46[m pasando datos como String
+[33m1e711a7[m cambios en la configuracion de email para que REnder me envie pedido de cotizacion por correo
+[33m9d96891[m configurando render
+[33ma562320[m arreglos de estilo y valore de cortinas
+[33m7c1cd6d[m Primera version subida a servidor de AMARIGOM con uso de correo e instagram
+[33m7ee6060[m version 18
+[33m6d86a16[m Primer commit
