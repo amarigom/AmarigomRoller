@@ -37,18 +37,11 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${cormorant.variable} ${inter.variable} scroll-smooth`}>
       <body className="font-sans antialiased bg-black text-white">
-        {/* El wrapper principal */}
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          
+        
           {/* El contenido crece para empujar el footer abajo si hay poco texto */}
           <main className="flex-grow">
             {children}
           </main>
-
-          <Footer />
-        </div>
-
         {/* Componente de Radix para las notificaciones (Toasts) */}
         <Toaster />
       </body>

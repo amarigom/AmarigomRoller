@@ -1,0 +1,12 @@
+[
+  { 
+    "id": "r1", 
+    "name": "Blackout Blanco", 
+    "metersLeft": 50.0, 
+    "widthCm": 210, 
+    "pricePerMeter": 15000, 
+    "status": "in_stock",
+    "category": "blackout",
+    "code": "BO-01"
+  }
+]
