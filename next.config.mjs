@@ -1,7 +1,16 @@
+// next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Aquí podés agregar configuraciones si las necesitás,
-  // pero por ahora dejalo vacío para que no falle.
+  async rewrites() {
+    return [
+      {
+        // Cuando el frontend pida /api/inventario, 
+        // Next.js lo redirige al servidor de Flask
+        source: '/api/:path*',
+        destination: 'http://127.0.0.1:5000/api/:path*', 
+      },
+    ];
+  },
 };
 
-export default nextConfig; // <-- Esto es lo que cambia
+export default nextConfig;

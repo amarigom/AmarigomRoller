@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, session
 from config import Config
 from flask_cors import CORS
 import os
+from routes.inventory import inventory_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -23,9 +24,10 @@ from routes.cart import cart_bp
 
 # Registrar blueprints
 app.register_blueprint(main_bp)
-app.register_blueprint(products_bp, url_prefix='/products')
-app.register_blueprint(quote_bp, url_prefix='/quote')
-app.register_blueprint(cart_bp, url_prefix='/cart')
+app.register_blueprint(inventory_bp, url_prefix='/api') 
+app.register_blueprint(products_bp, url_prefix='/api/products')
+app.register_blueprint(quote_bp, url_prefix='/api/quote')
+app.register_blueprint(cart_bp, url_prefix='/api/cart')
 
 # Contexto global para templates (idioma)
 @app.context_processor

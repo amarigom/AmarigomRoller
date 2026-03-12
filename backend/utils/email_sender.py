@@ -56,7 +56,7 @@ def send_quote_email(quote_data):
         )
         
         # Enviar emails de forma asíncrona
-        from app import app, mail
+        from backend.app import app, mail
         Thread(target=send_async_email, args=(app, customer_msg)).start()
         Thread(target=send_async_email, args=(app, admin_msg)).start()
         
