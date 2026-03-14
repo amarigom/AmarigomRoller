@@ -1,30 +1,40 @@
+# backend/app.py
 from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
 import os
 
-# Importaciones con el punto (.) para que Vercel las encuentre
-from .config import Config      
+# 1. Importaciones de modelos con punto (.)
 from .models import db          
 from .models.rollo import Rollo 
-from .routes.inventory import inventory_bp
 
-# 1. Inicializar la app y cargar config
 app = Flask(__name__)
-app.config.from_object(Config)
-# --- REFUERZO PARA VERCEL ---
-# Si por alguna razón Config no cargó la URI, la forzamos desde el entorno
-if not app.config.get('SQLALCHEMY_DATABASE_URI'):
-    database_url = os.environ.get("DATABASE_URL")
-    if database_url:
-        if database_url.startswith("postgres://"):
-            database_url = database_url.replace("postgres://", "postgresql://", 1)
-        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-# ----------------------------
+
+# --- HARD-FIX DE CONFIGURACIÓN ---
+# Leemos directamente del entorno del SISTEMA, no del archivo .env ni de Config
+uri = os.environ.get("DATABASE_URL")
+
+if uri:
+    if uri.startswith("postgres://"):
+        uri = uri.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = uri
+else:
+    # Si falla, esto nos va a decir en el LOG exactamente qué está viendo Python
+    print(f"DEBUG: Las variables de entorno actuales son: {list(os.environ.keys())}")
+    # Solo como último recurso intenta Config
+    from .config import Config
+    app.config.from_object(Config)
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "amarigom-secret-2026")
+# ---------------------------------
+
 CORS(app)
 
-# 2. Conectar la DB modularizada
-db.init_app(app) # <--- En lugar de db = SQLAlchemy(app)
+# 2. Conectar la DB
+db.init_app(app)
 app.db = db 
+
+# ... (El resto de tus Blueprints con el punto adelante, ej: from .routes.main import main_bp)
 
 # lógica de Mail...
 if app.config.get('MAIL_ENABLED'):
