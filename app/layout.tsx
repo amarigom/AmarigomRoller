@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" className={`${cormorant.variable} ${inter.variable} scroll-smooth`}>
+    <html lang="es" data-scroll-behavior="smooth"className={`${cormorant.variable} ${inter.variable} scroll-smooth`}>
       <body className="font-sans antialiased bg-black text-white">
         
           {/* El contenido crece para empujar el footer abajo si hay poco texto */}
