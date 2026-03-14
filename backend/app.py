@@ -11,13 +11,22 @@ from .routes.inventory import inventory_bp
 # 1. Inicializar la app y cargar config
 app = Flask(__name__)
 app.config.from_object(Config)
+# --- REFUERZO PARA VERCEL ---
+# Si por alguna razón Config no cargó la URI, la forzamos desde el entorno
+if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+# ----------------------------
 CORS(app)
 
 # 2. Conectar la DB modularizada
 db.init_app(app) # <--- En lugar de db = SQLAlchemy(app)
 app.db = db 
 
-# Mantenemos tu lógica de Mail...
+# lógica de Mail...
 if app.config.get('MAIL_ENABLED'):
     from flask_mail import Mail
     mail = Mail(app)
@@ -26,11 +35,11 @@ else:
     app.mail = None
 
 # 3. Importar y Registrar Blueprints
-from routes.inventory import inventory_bp
-from routes.main import main_bp
-from routes.products import products_bp
-from routes.quote import quote_bp
-from routes.cart import cart_bp
+from .routes.inventory import inventory_bp
+from .routes.main import main_bp
+from .routes.products import products_bp
+from .routes.quote import quote_bp
+from .routes.cart import cart_bp
 
 app.register_blueprint(main_bp)
 app.register_blueprint(inventory_bp, url_prefix='/api') 
