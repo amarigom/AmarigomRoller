@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from uuid import uuid4
-from models import db, Rollo  # <--- Importamos nuestro modelo modularizado
+from ..models import db, Rollo  # <--- Importamos nuestro modelo modularizado
 
 inventory_bp = Blueprint('inventory', __name__)
 
