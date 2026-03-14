@@ -1,5 +1,5 @@
 from flask import Blueprint, session, request, jsonify, current_app
-from utils.translations import get_translations
+from ..utils.translations import get_translations
 import resend  # Asegúrate de tener 'resend' en requirements.txt
 import os
 

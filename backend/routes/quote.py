@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
-from utils.email_sender import send_quote_email
-from utils.email_resend import send_resend_email
+from ..utils.email_sender import send_quote_email
+from ..utils.email_resend import send_resend_email
 
 quote_bp = Blueprint('quote', __name__)
 
