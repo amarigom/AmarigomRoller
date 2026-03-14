@@ -34,7 +34,7 @@
                 {% endif %}</p>
             </div>
             <div class="about-image">
-                <img src="{{ url_for('static', filename='images/hero-bg.jpg') }}" alt="AMARIGOM DECO">
+                <img src="{{ url_for('static', filename='/images/hero-bg.jpg') }}" alt="AMARIGOM DECO">
             </div>
         </div>
     </div>
@@ -72,7 +72,7 @@
             <!-- Blackout Product -->
             <div class="product-card">
                 <div class="product-image">
-                    <img src="{{ url_for('static', filename='images/products/bk1.jpg') }}" 
+                    <img src="{{ url_for('public', filename='images/products/bk1.jpg') }}" 
                          alt="{{ translations[lang]['product_blackout'] }}">
                     <div class="product-badge">Blackout</div>
                 </div>
