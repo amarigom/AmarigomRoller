@@ -2,8 +2,8 @@ from flask import Flask, render_template, request, jsonify, session
 from config import Config
 
 from flask_cors import CORS
-from models import db # <--- IMPORTANTE: Traemos el db modularizado
-from models.rollo import Rollo # <--- IMPORTANTE: Hay que importarlo para que se cree la tabla
+from .models import db # <--- IMPORTANTE: Traemos el db modularizado
+from .models.rollo import Rollo # <--- IMPORTANTE: Hay que importarlo para que se cree la tabla
 import os
 
 # 1. Inicializar la app y cargar config
