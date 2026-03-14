@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
-
+from dotenv import load_dotenv
+load_dotenv()
 class Config:
     """Configuración de la aplicación Flask"""
     
@@ -20,14 +21,11 @@ class Config:
     #os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER ='amarigomdeco@gmail.com'
     #os.environ.get('MAIL_DEFAULT_SENDER') or 'amarigomdeco@gmail.com'
-    
-    MAIL_ENABLED =True 
-    #bool(MAIL_SERVER and MAIL_USERNAME and MAIL_PASSWORD)
-    
+        
     # Configuración de sesión
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     
-    # Configuración de uploads (si necesitas subir imágenes)
+    # Configuración de uploads (para subir imágenes)
     UPLOAD_FOLDER = 'static/images/uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -36,3 +34,14 @@ class Config:
     CONTACT_EMAIL = os.environ.get('CONTACT_EMAIL') or 'contacto@amarigom.com'
     WHATSAPP_NUMBER = os.environ.get('WHATSAPP_NUMBER') or '+5492494630750'
     INSTAGRAM_URL = os.environ.get('INSTAGRAM_URL') or 'https://instagram.com/amarigom'
+
+
+    
+    # PostgreSQL:
+    uri = os.environ.get('DATABASE_URL')
+    if uri and uri.startswith("postgres://"):
+        uri = uri.replace("postgres://", "postgresql://", 1)
+        
+    SQLALCHEMY_DATABASE_URI = uri
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    MAIL_ENABLED = os.environ.get('MAIL_ENABLED') == 'True'

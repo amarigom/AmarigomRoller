@@ -1,54 +1,57 @@
-# backend/routes/inventory.py
 from flask import Blueprint, request, jsonify
-import json
-import os
 from uuid import uuid4
-from schemas import RolloBase # El que armamos antes
+from models import db, Rollo  # <--- Importamos nuestro modelo modularizado
 
 inventory_bp = Blueprint('inventory', __name__)
-JSON_PATH = os.path.join(os.getcwd(), 'data', 'inventory.json')
-
-def read_json():
-    if not os.path.exists(JSON_PATH): return []
-    with open(JSON_PATH, 'r') as f: return json.load(f)
-
-def write_json(data):
-    with open(JSON_PATH, 'w') as f: json.dump(data, f, indent=2)
 
 @inventory_bp.route('/inventory', methods=['GET'])
 def get_inventory():
-    return jsonify(read_json())
+    try:
+        # SELECT * FROM rollos;
+        rollos = Rollo.query.all()
+        return jsonify([r.to_dict() for r in rollos])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @inventory_bp.route('/inventory', methods=['POST'])
 def add_inventory():
-    inventory = read_json()
-    new_roll = request.json
-    
-    # Pydantic valida que los datos estén bien antes de guardar
+    data = request.json
     try:
-        # Agregamos ID si no viene
-        if 'id' not in new_roll: new_roll['id'] = str(uuid4())
+        # Generamos ID si no existe
+        nuevo_id = data.get('id') or str(uuid4())
         
-        # Validamos 
-        valid_roll = RolloBase(**new_roll)
+        # Creamos la instancia del modelo (usando los nombres de tu nueva DB)
+        nuevo_rollo = Rollo(
+            id=nuevo_id,
+            name=data['name'],
+            color=data.get('color', ''),
+            meters_total=float(data.get('metersTotal', 0)),
+            meters_left=float(data.get('metersLeft', data.get('metersTotal', 0)))
+        )
         
-        inventory.append(valid_roll.model_dump(by_alias=True))
-        write_json(inventory)
-        return jsonify(inventory), 201
+        db.session.add(nuevo_rollo)
+        db.session.commit()
+        
+        return jsonify(nuevo_rollo.to_dict()), 201
     except Exception as e:
+        db.session.rollback() # Si falla, deshacemos cambios
         return jsonify({"error": str(e)}), 400
 
 @inventory_bp.route('/inventory', methods=['PATCH'])
 def update_stock():
     data = request.json
-    inventory = read_json()
-    
-    for roll in inventory:
-        if roll.get('id') == data['id']:
-            current = float(roll['metersLeft'])
-            used = float(data['usedMeters'])
-            roll['metersLeft'] = round(max(0, current - used), 2)
-            break
+    try:
+        # Buscamos el rollo directamente por su ID (Mucho más eficiente que el for loop)
+        rollo = Rollo.query.get(data['id'])
+        
+        if not rollo:
+            return jsonify({"error": "Rollo no encontrado"}), 404
             
-    write_json(inventory)
-    return jsonify(inventory)
+        used = float(data['usedMeters'])
+        rollo.meters_left = round(max(0, rollo.meters_left - used), 2)
+        
+        db.session.commit()
+        return jsonify(rollo.to_dict())
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
