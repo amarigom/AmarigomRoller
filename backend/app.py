@@ -4,8 +4,8 @@ from flask_cors import CORS
 import os
 
 # 1. Importaciones de modelos con punto (.)
-from .models import db          
-from .models.rollo import Rollo 
+from models import db          
+from models.rollo import Rollo 
 
 app = Flask(__name__)
 
@@ -45,11 +45,11 @@ else:
     app.mail = None
 
 # 3. Importar y Registrar Blueprints
-from .routes.inventory import inventory_bp
-from .routes.main import main_bp
-from .routes.products import products_bp
-from .routes.quote import quote_bp
-from .routes.cart import cart_bp
+from routes.inventory import inventory_bp
+from routes.main import main_bp
+from routes.products import products_bp
+from routes.quote import quote_bp
+from routes.cart import cart_bp
 
 app.register_blueprint(main_bp)
 app.register_blueprint(inventory_bp, url_prefix='/api') 
