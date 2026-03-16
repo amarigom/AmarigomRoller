@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react"
 import { Plus, X, Edit2 } from "lucide-react"
 
-// 1. Definimos la interfaz profesional del objeto
+// 1. URL base dinámica: usa la variable de entorno en Vercel o nada en local (para usar el proxy)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
 interface FabricRoll {
   id?: string;
   code: string;
@@ -16,12 +18,10 @@ interface FabricRoll {
 }
 
 export default function InventarioPage() {
-  // 2. Tipamos el estado para que TS sepa que es un array de FabricRoll
   const [rolls, setRolls] = useState<FabricRoll[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   
-  // 3. Tipamos el formulario
   const [newRoll, setNewRoll] = useState({
     code: "", 
     name: "", 
@@ -31,11 +31,12 @@ export default function InventarioPage() {
     category: "blackout"
   })
 
+  // MODIFICADO: Ahora usa la constante API_BASE_URL
   const fetchInventory = () => {
     setLoading(true)
-    fetch("/api/inventory")
+    fetch(`${API_BASE_URL}/api/inventory`)
       .then(res => res.json())
-      .then((data: FabricRoll[]) => { // Tipamos la respuesta
+      .then((data: FabricRoll[]) => {
         setRolls(data)
         setLoading(false)
       })
@@ -52,28 +53,39 @@ export default function InventarioPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Validamos y transformamos los datos antes de enviar
     const payload = {
-      ...newRoll,
+      name: newRoll.name,
+      code: newRoll.code,
+      category: newRoll.category,
       metersLeft: Number(newRoll.metersLeft),
       widthCm: Number(newRoll.widthCm),
       pricePerMeter: Number(newRoll.pricePerMeter),
       status: "in_stock"
     }
 
-    const response = await fetch("/api/inventory", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
+    try {
+      // MODIFICADO: Ahora usa la constante API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/api/inventory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
 
-    if (response.ok) {
-      setShowForm(false)
-      setNewRoll({ code: "", name: "", metersLeft: "", widthCm: "", pricePerMeter: "", category: "blackout" })
-      fetchInventory()
+      if (response.ok) {
+        setShowForm(false)
+        setNewRoll({ code: "", name: "", metersLeft: "", widthCm: "", pricePerMeter: "", category: "blackout" })
+        fetchInventory()
+      } else {
+        const errorData = await response.json()
+        console.error("Error del servidor:", errorData.error)
+        alert("Error al guardar: " + errorData.error)
+      }
+    } catch (err) {
+      console.error("Error de red:", err)
     }
   }
 
+  // ... (el resto del return queda igual que el tuyo)
   return (
     <div className="space-y-6 p-4">
       <div className="flex justify-between items-end">
@@ -90,7 +102,6 @@ export default function InventarioPage() {
         </button>
       </div>
 
-      {/* Formulario de Carga */}
       {showForm && (
         <div className="bg-[#111111] border border-[#c9a961]/30 p-6 rounded-sm animate-in fade-in duration-500">
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -148,7 +159,6 @@ export default function InventarioPage() {
         </div>
       )}
 
-      {/* Tabla */}
       <div className="bg-[#111111] border border-[#2a2520] rounded-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-[#0a0a0a] border-b border-[#2a2520]">
@@ -167,7 +177,7 @@ export default function InventarioPage() {
                 <tr key={roll.id || `roll-${index}`} className="hover:bg-white/[0.02] transition-colors group">
                   <td className="px-6 py-4 text-sm font-mono text-[#c9a961]">{roll.code}</td>
                   <td className="px-6 py-4 text-sm text-[#f5f0e8]">{roll.name}</td>
-                  <td className="px-6 py-4 text-sm text-right text-green-400 font-medium">{roll.metersLeft} m</td>
+                  <td className={`px-6 py-4 text-sm text-right font-medium ${roll.metersLeft < 5 ? 'text-orange-400' : 'text-green-400'}`}>{roll.metersLeft} m</td>
                   <td className="px-6 py-4">
                     <button className="text-[#6b6560] hover:text-[#c9a961] transition-colors">
                       <Edit2 size={16} />

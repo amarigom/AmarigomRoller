@@ -21,7 +21,7 @@ else:
     # Si falla, esto nos va a decir en el LOG exactamente qué está viendo Python
     print(f"DEBUG: Las variables de entorno actuales son: {list(os.environ.keys())}")
     # Solo como último recurso intenta Config
-    from .config import Config
+    from config import Config
     app.config.from_object(Config)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

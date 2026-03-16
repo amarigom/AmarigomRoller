@@ -6,7 +6,7 @@ class RolloBase(BaseModel):
     id: Optional[str] = None
     code: str = Field(..., description="Código del rollo (ej: Blackout-01)")
     name: str = Field(..., description="Nombre de la tela")
-    color: str
+    color: Optional[str] = None
     width: float = Field(..., description="Ancho en metros")
     metersLeft: float = Field(..., alias="metersLeft", description="Metros disponibles")
     location: Optional[str] = "Depósito"
