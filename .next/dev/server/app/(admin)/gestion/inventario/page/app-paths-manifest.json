@@ -1,0 +1,3 @@
+{
+  "/(admin)/gestion/inventario/page": "app/(admin)/gestion/inventario/page.js"
+}
