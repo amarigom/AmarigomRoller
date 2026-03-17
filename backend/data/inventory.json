@@ -1,0 +1,22 @@
+[
+  {
+    "id": "r1",
+    "name": "Blackout Blanco",
+    "metersLeft": "48.70",
+    "widthCm": 210,
+    "pricePerMeter": 15000,
+    "status": "in_stock",
+    "category": "blackout",
+    "code": "BO-01"
+  },
+  {
+    "code": "B0-B2",
+    "name": "TELA SUN",
+    "metersLeft": 10,
+    "widthCm": 250,
+    "pricePerMeter": 12000,
+    "category": "sunscreen",
+    "status": "in_stock",
+    "id": "a7a65f11-feba-4c28-a3d1-14d3ff8b1b54"
+  }
+]
