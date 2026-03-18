@@ -11,7 +11,7 @@ app = Flask(__name__)
 uri = os.environ.get("DATABASE_URL")
 
 if not uri:
-    # Esto detendrá el programa con un mensaje claro si olvidas setear la variable
+    # Esto detendrá el programa con un mensaje claro si no se setea la variable
     raise ValueError("ERROR CRÍTICO: La variable DATABASE_URL no está configurada.")
 
 # Corrección obligatoria para SQLAlchemy

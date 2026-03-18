@@ -32,7 +32,7 @@ export default function InventoryPage() {
     const fetchInventory = async () => {
       try {
         
-        const response = await fetch("https://amarigom-roller-e02bak03n-andreas-projects-71d69b69.vercel.app/api/inventory")
+        const response = await fetch("https://amarigom-roller.vercel.app/api/inventory")
         
         if (!response.ok) throw new Error(`Error: ${response.statusText}`)
         
