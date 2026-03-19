@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from uuid import uuid4
-from models import db, Rollo  
+from models import db, Insumo  
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -8,8 +8,8 @@ inventory_bp = Blueprint('inventory', __name__)
 def get_inventory():
     try:
         # SELECT * FROM rollos;
-        rollos = Rollo.query.all()
-        return jsonify([r.to_dict() for r in rollos])
+        insumos = Insumo.query.all()
+        return jsonify([r.to_dict() for r in insumos])
     except Exception as e:
         return jsonify({"error": f"Error al obtener inventario: {str(e)}"}), 500
 
@@ -21,7 +21,7 @@ def add_inventory():
         nuevo_id = str(uuid4())
         
         # Mapeamos los nombres del JSON (Frontend) a las columnas de la DB
-        nuevo_rollo = Rollo(
+        nuevo_insumo = Insumo(
             id=nuevo_id,
             name=data.get('name'),
             code=data.get('code'),
@@ -32,10 +32,10 @@ def add_inventory():
             status=data.get('status', 'in_stock')
         )
         
-        db.session.add(nuevo_rollo)
+        db.session.add(nuevo_insumo)
         db.session.commit()
         
-        return jsonify(nuevo_rollo.to_dict()), 201
+        return jsonify(nuevo_insumo.to_dict()), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
@@ -47,19 +47,19 @@ def update_stock():
     print(f"1. Datos que llegan del Frontend: {data}")
     try:
         if not data or 'id' not in data:
-            return jsonify({"error": "ID de rollo requerido"}), 400
+            return jsonify({"error": "ID de insumo requerido"}), 400
 
         # Buscamos el rollo directamente por su ID
-        rollo = Rollo.query.get(data['id'])
+        insumo = Insumo.query.get(data['id'])
         
-        if not rollo:
-            return jsonify({"error": "Rollo no encontrado"}), 404
+        if not insumo:
+            return jsonify({"error": "Insumo no encontrado"}), 404
             
         used = float(data.get('usedMeters', 0))
-        rollo.meters_left = round(max(0, (rollo.meters_left or 0) - used), 2)
+        insumo.meters_left = round(max(0, (insumo.meters_left or 0) - used), 2)
         
         db.session.commit()
-        return jsonify(rollo.to_dict())
+        return jsonify(insumo.to_dict())
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400

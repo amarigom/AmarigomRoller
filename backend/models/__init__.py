@@ -6,4 +6,6 @@ db = SQLAlchemy(engine_options={
     "pool_recycle": 300,
 })
 
-from .rollo import Rollo
+
+# Importamos los modelos para que estén disponibles en toda la app
+from .insumo import Insumo, CategoriaInsumo
