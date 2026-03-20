@@ -1,14 +1,14 @@
 from flask import Blueprint, request, jsonify
 from uuid import uuid4
-from models import db, Insumo  
+from models import db, Supply, SupplyCategory  
 
 inventory_bp = Blueprint('inventory', __name__)
 
 @inventory_bp.route('/inventory', methods=['GET'])
 def get_inventory():
     try:
-        # SELECT * FROM rollos;
-        insumos = Insumo.query.all()
+        
+        insumos = Supply.query.all()
         return jsonify([r.to_dict() for r in insumos])
     except Exception as e:
         return jsonify({"error": f"Error al obtener inventario: {str(e)}"}), 500
@@ -21,16 +21,17 @@ def add_inventory():
         nuevo_id = str(uuid4())
         
         # Mapeamos los nombres del JSON (Frontend) a las columnas de la DB
-        nuevo_insumo = Insumo(
-            id=nuevo_id,
-            name=data.get('name'),
-            code=data.get('code'),
-            category=data.get('category'),
-            width_cm=float(data.get('widthCm', 0)),
-            price_per_meter=float(data.get('pricePerMeter', 0)),
-            meters_left=float(data.get('metersLeft', 0)),
-            status=data.get('status', 'in_stock')
-        )
+        nuevo_insumo = Supply(
+        # A la IZQUIERDA: Nombre en la DB (Python/SQLAlchemy)
+        # A la DERECHA: Nombre que viene en el JSON de React (data.get)
+        name=data.get('name'),
+        codigo_sku=data.get('codigo_sku'),           # Antes decía code=
+        categoria_id=data.get('categoria_id'),       # Usamos el ID que viene del select
+        ancho_cm=float(data.get('ancho_cm', 0)),     # Antes decía widthCm=
+        precio_costo_unitario=float(data.get('precio_costo_unitario', 0)), # Antes decía price=
+        stock_actual=float(data.get('stock_actual', 0)), # Antes decía metersLeft=
+        unidad_medida=data.get('unidad_medida', 'metro') 
+    )
         
         db.session.add(nuevo_insumo)
         db.session.commit()
@@ -50,7 +51,7 @@ def update_stock():
             return jsonify({"error": "ID de insumo requerido"}), 400
 
         # Buscamos el rollo directamente por su ID
-        insumo = Insumo.query.get(data['id'])
+        insumo = Supply.query.get(data['id'])
         
         if not insumo:
             return jsonify({"error": "Insumo no encontrado"}), 404
@@ -63,3 +64,18 @@ def update_stock():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+    
+    # --- NUEVA RUTA PARA CATEGORÍAS ---
+@inventory_bp.route('/categories', methods=['GET'])
+def get_categories():
+    try:
+        # Buscamos todas las categorías de la tabla 'categorias_insumos'
+        categorias = SupplyCategory.query.all()
+        
+        # Las convertimos a una lista de diccionarios para que React las entienda
+        resultado = [{"id": c.id, "name": c.name} for c in categorias]
+        
+        return jsonify(resultado), 200
+    except Exception as e:
+        print(f"Error en get_categories: {e}") # Esto sale en tu terminal de Python
+        return jsonify({"error": str(e)}), 500

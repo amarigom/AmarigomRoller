@@ -5,7 +5,5 @@ db = SQLAlchemy(engine_options={
     "pool_pre_ping": True,
     "pool_recycle": 300,
 })
-
-
-# Importamos los modelos para que estén disponibles en toda la app
-from .insumo import Insumo, CategoriaInsumo
+from .supply import Supply
+from .supply_category import SupplyCategory
