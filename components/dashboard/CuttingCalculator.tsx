@@ -1,207 +1,194 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Calculator, Scissors, AlertTriangle, Check } from "lucide-react"
-import type { FabricRoll, CuttingCalculation } from "@/lib/types/dashboards"
-import { cn, formatPrice } from "@/lib/utils"
+import { useState, useMemo, useEffect } from "react"
+import { Calculator, Scissors, AlertTriangle, Check, Loader2, DollarSign } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-interface CuttingCalculatorProps {
-  rolls: FabricRoll[]
-  onDiscountStock: (rollId: string, meters: number) => void
+// Actualizamos la interfaz con los datos de costo del backend
+interface RecipeComponent {
+  componente: string
+  consumo_m_o_m2: number
+  medida_corte: string
+  precio_unitario: number
+  costo_parcial: number
 }
 
-export default function CuttingCalculator({ rolls, onDiscountStock }: CuttingCalculatorProps) {
+interface CuttingCalculatorProps {
+  rolls: any[] 
+  productId: number 
+  onDiscountStock: (items: RecipeComponent[]) => void
+}
+
+export default function CuttingCalculator({ rolls, productId, onDiscountStock }: CuttingCalculatorProps) {
   const [windowWidth, setWindowWidth] = useState("")
   const [windowHeight, setWindowHeight] = useState("")
   const [selectedRollId, setSelectedRollId] = useState("")
+  const [budget, setBudget] = useState("") // Estado para presupuesto objetivo
+  const [explosion, setExplosion] = useState<RecipeComponent[] | null>(null)
+  const [loading, setLoading] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
 
-  const calculation: CuttingCalculation | null = useMemo(() => {
-    const w = parseFloat(windowWidth)
-    const h = parseFloat(windowHeight)
-    if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return null
-
-    const adjustedWidth = w + 10 
-    const adjustedHeight = h + 30
-    const linearMeters = adjustedHeight / 100
-
-    return {
-      windowWidthCm: w,
-      windowHeightCm: h,
-      adjustedWidthCm: adjustedWidth,
-      adjustedHeightCm: adjustedHeight,
-      linearMeters: Math.round(linearMeters * 100) / 100,
-      selectedRollId: selectedRollId || null,
+  const calcularReceta = async () => {
+    if (!windowWidth || !windowHeight) return
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/test-recipe/${productId}`)
+      const data = await response.json()
+      if (data.status === "success") {
+        setExplosion(data.explosion)
+      }
+    } catch (error) {
+      console.error("Error al calcular:", error)
+    } finally {
+      setLoading(false)
     }
-  }, [windowWidth, windowHeight, selectedRollId])
+  }
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (windowWidth && windowHeight) calcularReceta()
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [windowWidth, windowHeight])
+
+  // Cálculo de Costo Total
+  const totalCost = useMemo(() => {
+    if (!explosion) return 0
+    return explosion.reduce((acc, item) => acc + item.costo_parcial, 0)
+  }, [explosion])
+
+  // Lógica de Alerta de Presupuesto
+  const isOverBudget = useMemo(() => {
+    const b = parseFloat(budget)
+    return b > 0 && totalCost > b
+  }, [totalCost, budget])
 
   const selectedRoll = rolls.find((r) => r.id === selectedRollId)
 
-  // --- FUNCIÓN DE NORMALIZACIÓN DE ANCHO (Metros o CM) ---
-  const getRollWidthInCm = (roll: FabricRoll | undefined) => {
-    if (!roll) return 0
-    const w = Number(roll.widthCm)
-    // Si el valor es pequeño (ej: 2.1), son metros. Si es grande (ej: 210), son cm.
-    return w < 10 ? w * 100 : w
-  }
-
-  const canConfirm = useMemo(() => {
-    if (!calculation || !selectedRoll) return false
-    
-    // 1. Validar Largo (Stock disponible)
-    const tieneStockLargo = calculation.linearMeters <= Number(selectedRoll.metersLeft)
-    
-    // 2. Validar Ancho (Físico de la tela)
-    const anchoRolloCm = getRollWidthInCm(selectedRoll)
-    const cabeAncho = calculation.adjustedWidthCm <= anchoRolloCm
-    
-    return tieneStockLargo && cabeAncho
-  }, [calculation, selectedRoll])
-
-  const estimatedPrice = useMemo(() => {
-    if (!calculation || !selectedRoll) return 0
-    return Math.round(calculation.linearMeters * selectedRoll.pricePerMeter)
-  }, [calculation, selectedRoll])
-
-  function handleConfirm() {
-    if (!canConfirm || !calculation || !selectedRollId) return
-    onDiscountStock(selectedRollId, calculation.linearMeters)
-    setConfirmed(true)
-    setTimeout(() => {
-      setConfirmed(false)
-      handleReset()
-    }, 3000)
-  }
-
-  function handleReset() {
-    setWindowWidth("")
-    setWindowHeight("")
-    setSelectedRollId("")
-    setConfirmed(false)
-  }
-
-  const availableRolls = rolls.filter((r) => Number(r.metersLeft) > 0)
-
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="font-serif text-2xl text-[#f5f0e8]">Calculadora de Corte</h2>
-        <p className="text-sm text-[#6b6560] mt-1">Gestión de stock para AMARIGOM DECO</p>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* COLUMNA IZQUIERDA: INPUTS */}
         <div className="bg-[#111111] border border-[#2a2520] rounded-lg p-6 flex flex-col gap-5">
-          <div className="flex items-center gap-2 text-[#c9a961] mb-1">
-            <Calculator size={18} />
-            <h3 className="font-serif text-lg">Medidas de la ventana</h3>
-          </div>
-
+          <h3 className="text-[#c9a961] font-serif text-lg flex items-center gap-2">
+            <Calculator size={18} /> Medidas Finales
+          </h3>
+          
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs text-[#6b6560] uppercase mb-2">Ancho (cm)</label>
-              <input
-                type="number"
-                value={windowWidth}
-                onChange={(e) => { setWindowWidth(e.target.value); setConfirmed(false) }}
-                placeholder="150"
-                className="w-full bg-[#0a0a0a] border border-[#2a2520] rounded-lg px-4 py-3 text-[#f5f0e8] focus:border-[#c9a961] outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-[#6b6560] uppercase mb-2">Alto (cm)</label>
-              <input
-                type="number"
-                value={windowHeight}
-                onChange={(e) => { setWindowHeight(e.target.value); setConfirmed(false) }}
-                placeholder="200"
-                className="w-full bg-[#0a0a0a] border border-[#2a2520] rounded-lg px-4 py-3 text-[#f5f0e8] focus:border-[#c9a961] outline-none"
-              />
-            </div>
+            <input
+              type="number"
+              placeholder="Ancho cm"
+              value={windowWidth}
+              onChange={(e) => setWindowWidth(e.target.value)}
+              className="bg-black border border-[#2a2520] p-3 rounded text-white outline-none focus:border-[#c9a961]"
+            />
+            <input
+              type="number"
+              placeholder="Alto cm"
+              value={windowHeight}
+              onChange={(e) => setWindowHeight(e.target.value)}
+              className="bg-black border border-[#2a2520] p-3 rounded text-white outline-none focus:border-[#c9a961]"
+            />
           </div>
 
-          <div>
-            <label className="block text-xs text-[#6b6560] uppercase mb-2">Seleccionar rollo de tela</label>
-            <select
-              value={selectedRollId}
-              onChange={(e) => { setSelectedRollId(e.target.value); setConfirmed(false) }}
-              className="w-full bg-[#0a0a0a] border border-[#2a2520] rounded-lg px-4 py-3 text-[#f5f0e8] focus:border-[#c9a961] transition-colors outline-none"
-            >
-              <option value="">-- Seleccionar rollo --</option>
-              {availableRolls.map((roll) => (
-                <option key={roll.id} value={roll.id}>
-                  {roll.name} ({roll.metersLeft}m disp. - {getRollWidthInCm(roll)}cm ancho)
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] text-[#6b6560] uppercase">Presupuesto Objetivo ($)</label>
+            <input
+              type="number"
+              placeholder="Ej: 50000"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+              className="bg-black border border-[#2a2520] p-3 rounded text-white outline-none focus:border-[#c9a961]"
+            />
           </div>
 
-          <div className="flex gap-3 mt-2">
-            <button
-              onClick={handleConfirm}
-              disabled={!canConfirm || confirmed}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all",
-                confirmed ? "bg-[#7a9b76] text-[#0a0a0a]" : canConfirm ? "bg-[#c9a961] text-[#0a0a0a] hover:bg-[#d4b574]" : "bg-[#1a1a1a] text-[#3a3530] cursor-not-allowed"
-              )}
-            >
-              {confirmed ? <><Check size={16} /> ¡Stock actualizado!</> : <><Scissors size={16} /> Confirmar y descontar stock</>}
-            </button>
-            <button onClick={handleReset} className="px-4 py-3 rounded-lg text-sm border border-[#2a2520] text-[#6b6560] hover:text-white">
-              Limpiar
-            </button>
-          </div>
+          <select
+            value={selectedRollId}
+            onChange={(e) => setSelectedRollId(e.target.value)}
+            className="bg-black border border-[#2a2520] p-3 rounded text-white outline-none"
+          >
+            <option value="">Seleccionar Rollo de Tela</option>
+            {rolls.map(roll => (
+              <option key={roll.id} value={roll.id}>{roll.name} ({roll.metersLeft}m)</option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => {
+                onDiscountStock(explosion || [])
+                setConfirmed(true)
+                setTimeout(() => setConfirmed(false), 3000)
+            }}
+            disabled={!explosion || confirmed}
+            className={cn(
+                "w-full py-4 rounded-lg font-bold transition-all flex justify-center items-center gap-2",
+                confirmed ? "bg-green-700 text-white" : "bg-[#c9a961] text-black hover:bg-[#d4b574]"
+            )}
+          >
+            {confirmed ? <Check /> : <Scissors />}
+            {confirmed ? "Stock Descontado" : "Confirmar Producción"}
+          </button>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <div className="bg-[#111111] border border-[#2a2520] rounded-lg p-6">
-            <h3 className="font-serif text-lg text-[#c9a961] mb-4">Resultado del cálculo</h3>
-
-            {calculation ? (
-              <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-[#0a0a0a] rounded-lg p-4">
-                    <p className="text-[10px] text-[#6b6560] uppercase">Ancho + Margen (+10)</p>
-                    <p className="text-lg text-[#c9a961] font-serif">{calculation.adjustedWidthCm} cm</p>
+        {/* COLUMNA DERECHA: RESULTADOS Y COSTOS */}
+        <div className="bg-[#111111] border border-[#2a2520] rounded-lg p-6 flex flex-col">
+          <h3 className="text-[#c9a961] font-serif text-lg mb-4">Desglose de Materiales</h3>
+          
+          <div className="flex-1 overflow-y-auto space-y-3 max-h-[400px] pr-2 custom-scrollbar">
+            {loading ? (
+              <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#c9a961]" /></div>
+            ) : explosion ? (
+              explosion.map((item, index) => (
+                <div key={index} className="flex justify-between items-center bg-black/40 p-3 rounded border border-[#2a2520]">
+                  <div>
+                    <p className="text-white text-sm font-bold">{item.componente}</p>
+                    <p className="text-[10px] text-[#6b6560] uppercase tracking-wider">Corte: {item.medida_corte}</p>
                   </div>
-                  <div className="bg-[#0a0a0a] rounded-lg p-4">
-                    <p className="text-[10px] text-[#6b6560] uppercase">Alto + Margen (+30)</p>
-                    <p className="text-lg text-[#c9a961] font-serif">{calculation.adjustedHeightCm} cm</p>
+                  <div className="text-right">
+                    <p className="text-[#c9a961] font-mono">{item.consumo_m_o_m2}</p>
+                    <p className="text-[10px] text-[#6b6560] font-bold">${item.costo_parcial.toFixed(2)}</p>
                   </div>
                 </div>
-
-                <div className="bg-[#c9a961]/5 border border-[#c9a961]/20 rounded-lg p-5 text-center">
-                  <p className="text-xs text-[#c9a961] uppercase mb-1">Metros lineales necesarios</p>
-                  <p className="text-4xl font-serif text-[#c9a961]">{calculation.linearMeters} m</p>
-                </div>
-              </div>
+              ))
             ) : (
-              <div className="flex flex-col items-center py-8 text-[#2a2520]">
-                <Calculator size={40} className="mb-3" />
-                <p className="text-sm text-[#6b6560]">Ingresá medidas para ver el cálculo</p>
-              </div>
+              <p className="text-[#6b6560] text-center py-10">Ingresá medidas para calcular...</p>
             )}
           </div>
 
-          {/* --- ALERTAS DE VALIDACIÓN --- */}
-          {calculation && selectedRoll && (
-            <div className="flex flex-col gap-2">
-              {calculation.adjustedWidthCm > getRollWidthInCm(selectedRoll) && (
-                <div className="flex items-center gap-2 bg-[#c97676]/10 border border-[#c97676]/20 rounded-lg px-4 py-3 text-[#c97676]">
-                  <AlertTriangle size={16} className="flex-shrink-0" />
-                  <p className="text-xs">
-                    El ancho ajustado ({calculation.adjustedWidthCm}cm) supera el ancho del rollo ({getRollWidthInCm(selectedRoll)}cm). La cortina no entra.
-                  </p>
+          {/* SECCIÓN DE TOTALES */}
+          {explosion && (
+            <div className={cn(
+                "mt-6 pt-6 border-t border-[#2a2520] transition-all duration-500",
+                isOverBudget ? "bg-red-950/20 -m-2 p-4 rounded-lg border border-red-900/50" : ""
+            )}>
+              <div className="flex justify-between items-end">
+                <div className="flex flex-col">
+                    <span className={cn(
+                        "text-[10px] uppercase tracking-[2px] mb-1",
+                        isOverBudget ? "text-red-400 font-bold" : "text-[#6b6560]"
+                    )}>
+                        {isOverBudget ? "⚠️ Excede Presupuesto" : "Costo Total Materiales"}
+                    </span>
+                    <span className={cn(
+                        "text-3xl font-serif",
+                        isOverBudget ? "text-red-500" : "text-white"
+                    )}>
+                        ${totalCost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                    </span>
                 </div>
-              )}
-              {calculation.linearMeters > Number(selectedRoll.metersLeft) && (
-                <div className="flex items-center gap-2 bg-[#c97676]/10 border border-[#c97676]/20 rounded-lg px-4 py-3 text-[#c97676]">
-                  <AlertTriangle size={16} className="flex-shrink-0" />
-                  <p className="text-xs">Stock insuficiente en metros lineales ({selectedRoll.metersLeft}m disponibles)</p>
+                
+                <div className="text-right">
+                    <p className="text-[10px] text-[#6b6560] uppercase mb-1">Precio Sugerido (40% marg.)</p>
+                    <p className="text-xl text-[#c9a961] font-bold">
+                        ${(totalCost / 0.6).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                    </p>
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>
+
       </div>
     </div>
   )

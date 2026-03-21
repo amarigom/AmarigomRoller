@@ -2,14 +2,21 @@
 
 import { useState, useEffect } from "react"
 import { Plus, X, Loader2 } from "lucide-react"
-import InventoryView from "@/components/dashboard/InventoryView"// Asegurate que esta ruta sea correcta
+import InventoryView from "@/components/dashboard/InventoryView"
 import { InventoryItem } from "@/lib/types/dashboards"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+interface Categoria {
+  id: number;
+  name: string;
+}
+
 export default function InventarioPage() {
   const [items, setItems] = useState<InventoryItem[]>([])
+  const [categorias, setCategorias] = useState<Categoria[]>([])
   const [loading, setLoading] = useState(true)
+  const [issubmitting, setIsSubmitting] = useState(false) // Para evitar doble click
   const [showForm, setShowForm] = useState(false)
   
   const [newInsumo, setNewInsumo] = useState({
@@ -18,16 +25,21 @@ export default function InventarioPage() {
     metersLeft: "", 
     widthCm: "", 
     price: "", 
-    category: "Telas",
+    categoryId: "", 
     unit: "metro"
   })
 
-  const fetchInventory = async () => {
+  const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE_URL}/api/inventory`)
-      const data = await res.json()
-      setItems(data)
+      const [resInv, resCats] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/inventory`),
+        fetch(`${API_BASE_URL}/api/categories`)
+      ]);
+      const dataInv = await resInv.json()
+      const dataCats = await resCats.json()
+      setItems(dataInv)
+      setCategorias(dataCats)
     } catch (err) {
       console.error("Error en el fetch:", err)
     } finally {
@@ -36,19 +48,21 @@ export default function InventarioPage() {
   }
 
   useEffect(() => {
-    fetchInventory()
+    fetchData()
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
+    
     const payload = {
       name: newInsumo.name,
-      code: newInsumo.code,
-      category: newInsumo.category,
-      metersLeft: Number(newInsumo.metersLeft),
-      widthCm: Number(newInsumo.widthCm) || 0,
-      price: Number(newInsumo.price),
-      unit: newInsumo.unit
+      codigo_sku: newInsumo.code,
+      categoria_id: Number(newInsumo.categoryId),
+      unidad_medida: newInsumo.unit,
+      precio_costo_unitario: Number(newInsumo.price),
+      stock_actual: Number(newInsumo.metersLeft),
+      ancho_cm: Number(newInsumo.widthCm) || 0
     }
 
     try {
@@ -60,20 +74,22 @@ export default function InventarioPage() {
 
       if (response.ok) {
         setShowForm(false)
-        setNewInsumo({ code: "", name: "", metersLeft: "", widthCm: "", price: "", category: "Telas", unit: "metro" })
-        fetchInventory()
+        setNewInsumo({ code: "", name: "", metersLeft: "", widthCm: "", price: "", categoryId: "", unit: "metro" })
+        fetchData()
       } else {
         const errorData = await response.json()
         alert("Error al guardar: " + errorData.error)
       }
     } catch (err) {
       console.error("Error de red:", err)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   return (
     <div className="container mx-auto space-y-6 p-4 md:p-8">
-      {/* HEADER DINÁMICO */}
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="font-serif text-3xl text-[#f5f0e8]">Gestión de Stock</h1>
@@ -88,12 +104,12 @@ export default function InventarioPage() {
         </button>
       </div>
 
-      {/* FORMULARIO (Diseño mejorado) */}
+      {/* FORMULARIO */}
       {showForm && (
         <div className="bg-[#111111] border border-[#c9a961]/20 p-6 rounded-2xl shadow-2xl animate-in slide-in-from-top duration-300">
           <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#6b6560] uppercase ml-1">SKU / Código</label>
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">SKU / Código</label>
                 <input 
                     placeholder="Ej: BO-01" 
                     className="bg-black border border-[#2a2520] p-3 text-white rounded-xl focus:border-[#c9a961] outline-none text-sm" 
@@ -103,7 +119,7 @@ export default function InventarioPage() {
                 />
             </div>
             <div className="flex flex-col gap-1 md:col-span-2">
-                <label className="text-[10px] text-[#6b6560] uppercase ml-1">Nombre del Insumo</label>
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Nombre del Insumo</label>
                 <input 
                     placeholder="Nombre completo" 
                     className="bg-black border border-[#2a2520] p-3 text-white rounded-xl focus:border-[#c9a961] outline-none text-sm"
@@ -113,56 +129,76 @@ export default function InventarioPage() {
                 />
             </div>
             <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-[#6b6560] uppercase ml-1">Categoría</label>
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Categoría</label>
                 <select 
-                    className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
-                    value={newInsumo.category} 
-                    onChange={e => setNewInsumo({...newInsumo, category: e.target.value})}
+                    className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm outline-none focus:border-[#c9a961]"
+                    value={newInsumo.categoryId} 
+                    onChange={e => setNewInsumo({...newInsumo, categoryId: e.target.value})}
+                    required
                 >
-                    <option value="Telas">Telas</option>
-                    <option value="Sistemas Roller">Sistemas Roller</option>
-                    <option value="Perfiles y Tubos">Perfiles y Tubos</option>
-                    <option value="Accesorios">Accesorios</option>
+                    <option value="">Seleccionar...</option>
+                    {categorias.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                 </select>
             </div>
-            <input 
-              type="number" step="any" placeholder="Stock Inicial" 
-              className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
-              value={newInsumo.metersLeft} 
-              onChange={e => setNewInsumo({...newInsumo, metersLeft: e.target.value})} 
-              required 
-            />
-            <input 
-              type="number" step="any" placeholder="Ancho (cm)" 
-              className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
-              value={newInsumo.widthCm} 
-              onChange={e => setNewInsumo({...newInsumo, widthCm: e.target.value})} 
-            />
-            <input 
-              type="number" step="any" placeholder="Precio Costo" 
-              className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
-              value={newInsumo.price} 
-              onChange={e => setNewInsumo({...newInsumo, price: e.target.value})} 
-              required 
-            />
-            <select 
-                className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
-                value={newInsumo.unit} 
-                onChange={e => setNewInsumo({...newInsumo, unit: e.target.value})}
-            >
-                <option value="metro">Metros</option>
-                <option value="cm">Centímetros</option>
-                <option value="unidad">Unidades</option>
-            </select>
+
+            <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Stock Inicial</label>
+                <input 
+                  type="number" step="any" placeholder="0.00" 
+                  className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
+                  value={newInsumo.metersLeft} 
+                  onChange={e => setNewInsumo({...newInsumo, metersLeft: e.target.value})} 
+                  required 
+                />
+            </div>
+
+            <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Ancho (cm)</label>
+                <input 
+                  type="number" step="any" placeholder="Ej: 280" 
+                  className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
+                  value={newInsumo.widthCm} 
+                  onChange={e => setNewInsumo({...newInsumo, widthCm: e.target.value})} 
+                />
+            </div>
+
+            <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Precio Costo</label>
+                <input 
+                  type="number" step="any" placeholder="0.00" 
+                  className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
+                  value={newInsumo.price} 
+                  onChange={e => setNewInsumo({...newInsumo, price: e.target.value})} 
+                  required 
+                />
+            </div>
+
+            <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Unidad</label>
+                <select 
+                    className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
+                    value={newInsumo.unit} 
+                    onChange={e => setNewInsumo({...newInsumo, unit: e.target.value})}
+                >
+                    <option value="metro">Metros</option>
+                    <option value="cm">Centímetros</option>
+                    <option value="unidad">Unidades</option>
+                </select>
+            </div>
             
-            <button type="submit" className="md:col-span-4 bg-[#c9a961] text-black py-4 font-bold hover:bg-[#d4b574] transition-all rounded-xl mt-2 shadow-lg">
-              GUARDAR EN BASE DE DATOS
+            <button 
+              type="submit" 
+              disabled={issubmitting}
+              className="md:col-span-4 bg-[#c9a961] text-black py-4 font-bold hover:bg-[#d4b574] transition-all rounded-xl mt-2 shadow-lg disabled:opacity-50 flex justify-center items-center gap-2"
+            >
+              {issubmitting ? <Loader2 className="animate-spin" size={20} /> : "GUARDAR EN BASE DE DATOS"}
             </button>
           </form>
         </div>
       )}
 
-      {/* AHORA SÍ: Usamos el componente visual que diseñamos */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="animate-spin text-[#c9a961] mb-4" size={32} />
