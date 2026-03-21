@@ -32,7 +32,7 @@ class RecipeBOM(db.Model):
             "delta_alto": float(self.delta_alto_cm),
             "tipo_calculo": self.tipo_calculo,
             "stock_info": {
-                "medida": self.insumo.unidad_medida if self.insumo else None,
-                "precio_base": float(self.insumo.precio_costo_unitario) if self.insumo else 0
+            "medida": self.insumo.unidad_medida if self.insumo else None,
+            "precio_base": float(self.insumo.precio_costo_unitario) if self.insumo else 0
             }
         }
