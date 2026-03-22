@@ -5,7 +5,7 @@ import { Plus, X, Loader2 } from "lucide-react"
 import InventoryView from "@/components/dashboard/InventoryView"
 import { InventoryItem } from "@/lib/types/dashboards"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
 interface Categoria {
   id: number;
