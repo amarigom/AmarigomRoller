@@ -4,13 +4,14 @@ import { useState, useEffect } from "react"
 import CuttingCalculator from "@/components/dashboard/CuttingCalculator"
 import type { FabricRoll } from "@/lib/types/dashboards"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 export default function CalculadoraPage() {
   const [rolls, setRolls] = useState<FabricRoll[]>([])
 
   // Función para cargar o refrescar los rollos
   const loadInventory = async () => {
     try {
-      const res = await fetch("/api/inventory");
+      const res = await fetch(`${API_BASE_URL}/api/inventory`);
       const data = await res.json();
       setRolls(data);
     } catch (error) {

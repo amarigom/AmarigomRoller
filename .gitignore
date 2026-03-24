@@ -1,4 +1,7 @@
 # Python
+.next/
+node_modules/
+*.pyc
 __pycache__/
 *.py[cod]
 *$py.class

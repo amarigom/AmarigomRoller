@@ -1,16 +1,17 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Calculator, Scissors, AlertTriangle, Check, Loader2, DollarSign } from "lucide-react"
+import { Calculator, Scissors, AlertTriangle, Check, Loader2, DollarSign, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// Actualizamos la interfaz con los datos de costo del backend
 interface RecipeComponent {
   componente: string
   consumo_m_o_m2: number
   medida_corte: string
   precio_unitario: number
   costo_parcial: number
+  metodo?: "ROLLO" | "RETAZO" // Nuevo: Identifica el origen
+  id_retazo?: number         // Nuevo: ID específico si es retazo
 }
 
 interface CuttingCalculatorProps {
@@ -23,8 +24,9 @@ export default function CuttingCalculator({ rolls, productId, onDiscountStock }:
   const [windowWidth, setWindowWidth] = useState("")
   const [windowHeight, setWindowHeight] = useState("")
   const [selectedRollId, setSelectedRollId] = useState("")
-  const [budget, setBudget] = useState("") // Estado para presupuesto objetivo
+  const [budget, setBudget] = useState("")
   const [explosion, setExplosion] = useState<RecipeComponent[] | null>(null)
+  const [optimization, setOptimization] = useState<{mensaje: string, id: number} | null>(null)
   const [loading, setLoading] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
 
@@ -32,10 +34,24 @@ export default function CuttingCalculator({ rolls, productId, onDiscountStock }:
     if (!windowWidth || !windowHeight) return
     setLoading(true)
     try {
-      const response = await fetch(`/api/test-recipe/${productId}`)
-      const data = await response.json()
+      // Enviamos ancho y alto para que el backend busque retazos
+      const response = await fetch(
+      `/api/test-recipe/${productId}?w=${windowWidth}&h=${windowHeight}`
+    )
+    
+    if (!response.ok) throw new Error("Error en la respuesta del servidor");
+
+    const data = await response.json()
+      
       if (data.status === "success") {
         setExplosion(data.explosion)
+        // Si el backend encontró un retazo para la tela, lo guardamos para el banner
+        const telaOpt = data.explosion.find((item: any) => item.metodo === "RETAZO")
+        if (telaOpt) {
+          setOptimization({ mensaje: telaOpt.mensaje, id: telaOpt.id_retazo })
+        } else {
+          setOptimization(null)
+        }
       }
     } catch (error) {
       console.error("Error al calcular:", error)
@@ -47,26 +63,36 @@ export default function CuttingCalculator({ rolls, productId, onDiscountStock }:
   useEffect(() => {
     const timer = setTimeout(() => {
       if (windowWidth && windowHeight) calcularReceta()
-    }, 500)
+    }, 600)
     return () => clearTimeout(timer)
-  }, [windowWidth, windowHeight])
+  }, [windowWidth, windowHeight, productId])
 
-  // Cálculo de Costo Total
   const totalCost = useMemo(() => {
     if (!explosion) return 0
     return explosion.reduce((acc, item) => acc + item.costo_parcial, 0)
   }, [explosion])
 
-  // Lógica de Alerta de Presupuesto
   const isOverBudget = useMemo(() => {
     const b = parseFloat(budget)
     return b > 0 && totalCost > b
   }, [totalCost, budget])
 
-  const selectedRoll = rolls.find((r) => r.id === selectedRollId)
-
   return (
     <div className="flex flex-col gap-6">
+      
+      {/* BANNER DE OPTIMIZACIÓN (Aparece solo si hay retazo) */}
+      {optimization && (
+        <div className="bg-[#c9a961]/10 border border-[#c9a961]/30 p-4 rounded-xl flex items-center gap-4 animate-pulse">
+          <div className="bg-[#c9a961] p-2 rounded-full text-black">
+            <Sparkles size={20} />
+          </div>
+          <div className="flex-1">
+            <p className="text-[#c9a961] font-bold text-sm">¡Ahorro Detectado!</p>
+            <p className="text-[#f5f0e8] text-xs italic">{optimization.mensaje}</p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* COLUMNA IZQUIERDA: INPUTS */}
@@ -76,43 +102,27 @@ export default function CuttingCalculator({ rolls, productId, onDiscountStock }:
           </h3>
           
           <div className="grid grid-cols-2 gap-4">
-            <input
-              type="number"
-              placeholder="Ancho cm"
-              value={windowWidth}
-              onChange={(e) => setWindowWidth(e.target.value)}
-              className="bg-black border border-[#2a2520] p-3 rounded text-white outline-none focus:border-[#c9a961]"
-            />
-            <input
-              type="number"
-              placeholder="Alto cm"
-              value={windowHeight}
-              onChange={(e) => setWindowHeight(e.target.value)}
-              className="bg-black border border-[#2a2520] p-3 rounded text-white outline-none focus:border-[#c9a961]"
-            />
+            <div className="space-y-1">
+              <label className="text-[10px] text-[#6b6560] uppercase ml-1">Ancho (cm)</label>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={windowWidth}
+                onChange={(e) => setWindowWidth(e.target.value)}
+                className="w-full bg-black border border-[#2a2520] p-3 rounded-xl text-white outline-none focus:border-[#c9a961] transition-all"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] text-[#6b6560] uppercase ml-1">Alto (cm)</label>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={windowHeight}
+                onChange={(e) => setWindowHeight(e.target.value)}
+                className="w-full bg-black border border-[#2a2520] p-3 rounded-xl text-white outline-none focus:border-[#c9a961] transition-all"
+              />
+            </div>
           </div>
-
-          <div className="flex flex-col gap-2">
-            <label className="text-[10px] text-[#6b6560] uppercase">Presupuesto Objetivo ($)</label>
-            <input
-              type="number"
-              placeholder="Ej: 50000"
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              className="bg-black border border-[#2a2520] p-3 rounded text-white outline-none focus:border-[#c9a961]"
-            />
-          </div>
-
-          <select
-            value={selectedRollId}
-            onChange={(e) => setSelectedRollId(e.target.value)}
-            className="bg-black border border-[#2a2520] p-3 rounded text-white outline-none"
-          >
-            <option value="">Seleccionar Rollo de Tela</option>
-            {rolls.map(roll => (
-              <option key={roll.id} value={roll.id}>{roll.name} ({roll.metersLeft}m)</option>
-            ))}
-          </select>
 
           <button
             onClick={() => {
@@ -120,75 +130,73 @@ export default function CuttingCalculator({ rolls, productId, onDiscountStock }:
                 setConfirmed(true)
                 setTimeout(() => setConfirmed(false), 3000)
             }}
-            disabled={!explosion || confirmed}
+            disabled={!explosion || loading || confirmed}
             className={cn(
-                "w-full py-4 rounded-lg font-bold transition-all flex justify-center items-center gap-2",
-                confirmed ? "bg-green-700 text-white" : "bg-[#c9a961] text-black hover:bg-[#d4b574]"
+                "w-full py-4 rounded-xl font-bold transition-all flex justify-center items-center gap-2 shadow-lg",
+                confirmed ? "bg-green-600 text-white" : "bg-[#c9a961] text-black hover:bg-[#d4b574] disabled:opacity-30"
             )}
           >
-            {confirmed ? <Check /> : <Scissors />}
-            {confirmed ? "Stock Descontado" : "Confirmar Producción"}
+            {loading ? <Loader2 className="animate-spin" /> : confirmed ? <Check /> : <Scissors />}
+            {confirmed ? "Stock Actualizado" : "Confirmar y Cortar"}
           </button>
         </div>
 
-        {/* COLUMNA DERECHA: RESULTADOS Y COSTOS */}
+        {/* COLUMNA DERECHA: DESGLOSE */}
         <div className="bg-[#111111] border border-[#2a2520] rounded-lg p-6 flex flex-col">
-          <h3 className="text-[#c9a961] font-serif text-lg mb-4">Desglose de Materiales</h3>
+          <h3 className="text-[#6b6560] font-serif text-lg mb-4 flex justify-between">
+            Desglose de Materiales
+            {loading && <Loader2 size={16} className="animate-spin text-[#c9a961]" />}
+          </h3>
           
-          <div className="flex-1 overflow-y-auto space-y-3 max-h-[400px] pr-2 custom-scrollbar">
-            {loading ? (
-              <div className="flex justify-center py-10"><Loader2 className="animate-spin text-[#c9a961]" /></div>
-            ) : explosion ? (
-              explosion.map((item, index) => (
-                <div key={index} className="flex justify-between items-center bg-black/40 p-3 rounded border border-[#2a2520]">
-                  <div>
+          <div className="flex-1 space-y-3">
+            {explosion?.map((item, index) => (
+              <div 
+                key={index} 
+                className={cn(
+                  "flex justify-between items-center p-3 rounded-lg border transition-all",
+                  item.metodo === "RETAZO" ? "bg-[#c9a961]/5 border-[#c9a961]/40" : "bg-black/40 border-[#2a2520]"
+                )}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
                     <p className="text-white text-sm font-bold">{item.componente}</p>
-                    <p className="text-[10px] text-[#6b6560] uppercase tracking-wider">Corte: {item.medida_corte}</p>
+                    {item.metodo === "RETAZO" && <span className="text-[8px] bg-[#c9a961] text-black px-1 rounded font-bold">RETAZO</span>}
                   </div>
-                  <div className="text-right">
-                    <p className="text-[#c9a961] font-mono">{item.consumo_m_o_m2}</p>
-                    <p className="text-[10px] text-[#6b6560] font-bold">${item.costo_parcial.toFixed(2)}</p>
-                  </div>
+                  <p className="text-[10px] text-[#6b6560] uppercase tracking-wider">Corte: {item.medida_corte}</p>
                 </div>
-              ))
-            ) : (
-              <p className="text-[#6b6560] text-center py-10">Ingresá medidas para calcular...</p>
-            )}
+                <div className="text-right">
+                  <p className="text-[#c9a961] font-mono text-sm">{item.consumo_m_o_m2}</p>
+                  <p className="text-[10px] text-[#6b6560] font-bold">${item.costo_parcial.toFixed(2)}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* SECCIÓN DE TOTALES */}
+          {/* TOTALES */}
           {explosion && (
             <div className={cn(
-                "mt-6 pt-6 border-t border-[#2a2520] transition-all duration-500",
-                isOverBudget ? "bg-red-950/20 -m-2 p-4 rounded-lg border border-red-900/50" : ""
+                "mt-6 pt-4 border-t border-[#2a2520]",
+                isOverBudget && "border-red-900/50"
             )}>
               <div className="flex justify-between items-end">
-                <div className="flex flex-col">
-                    <span className={cn(
-                        "text-[10px] uppercase tracking-[2px] mb-1",
-                        isOverBudget ? "text-red-400 font-bold" : "text-[#6b6560]"
-                    )}>
-                        {isOverBudget ? "⚠️ Excede Presupuesto" : "Costo Total Materiales"}
-                    </span>
-                    <span className={cn(
-                        "text-3xl font-serif",
-                        isOverBudget ? "text-red-500" : "text-white"
-                    )}>
-                        ${totalCost.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
-                    </span>
+                <div>
+                  <p className={cn("text-[9px] uppercase tracking-widest mb-1", isOverBudget ? "text-red-400" : "text-[#6b6560]")}>
+                    {isOverBudget ? "⚠️ Presupuesto Excedido" : "Costo Total"}
+                  </p>
+                  <p className={cn("text-2xl font-serif", isOverBudget ? "text-red-500" : "text-white")}>
+                    ${totalCost.toLocaleString('es-AR')}
+                  </p>
                 </div>
-                
                 <div className="text-right">
-                    <p className="text-[10px] text-[#6b6560] uppercase mb-1">Precio Sugerido (40% marg.)</p>
-                    <p className="text-xl text-[#c9a961] font-bold">
-                        ${(totalCost / 0.6).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-                    </p>
+                  <p className="text-[9px] text-[#6b6560] uppercase mb-1">PVP Sugerido</p>
+                  <p className="text-xl text-[#c9a961] font-bold">
+                    ${(totalCost / 0.6).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                  </p>
                 </div>
               </div>
             </div>
           )}
         </div>
-
       </div>
     </div>
   )
