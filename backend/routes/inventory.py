@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
-from models import db, Supply, SupplyCategory, RecipeBOM 
+from models import db, Supply, SupplyCategory, RecipeBOM ,RetazoTela
+
+
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -33,92 +35,107 @@ def add_inventory():
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
-# --- 3. ACTUALIZAR STOCK ---
-@inventory_bp.route('/inventory/<int:item_id>', methods=['PATCH'])
-def update_stock_by_id(item_id):
-    data = request.json
-    try:
-        insumo = Supply.query.get_or_404(item_id)
-        
-        if 'used_meters' in data:
-            descuento = float(data['used_meters'])
-            insumo.stock_actual = round(max(0, (insumo.stock_actual or 0) - descuento), 2)
-        
-        elif 'add_units' in data:
-            incremento = float(data['add_units'])
-            insumo.stock_actual = round((insumo.stock_actual or 0) + incremento, 2)
-            
-        elif 'new_total' in data:
-            insumo.stock_actual = float(data['new_total'])
-
-        db.session.commit()
-        return jsonify(insumo.to_dict()), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 400
-
-# --- 4. CÁLCULO DINÁMICO DE RECETA (EXPLOSIÓN DE MATERIALES) ---
+# --- 3. TEST RECIPE (CALCULADORA) ---
 @inventory_bp.route('/test-recipe/<int:product_id>')
 def test_recipe(product_id):
+    resultado = [] # Lo inicializamos arriba para que el except siempre lo encuentre
     try:
         components = RecipeBOM.query.filter_by(id_padre=product_id).all()
         if not components:
-            return jsonify({"error": "No hay componentes"}), 404
+            return jsonify({"status": "error", "message": "No hay componentes"}), 404
 
-        # 1. Medidas del pedido (en cm)
         w_pedido = float(request.args.get('w', 150.0))
         h_pedido = float(request.args.get('h', 200.0))
-        
-        resultado = []
 
         for item in components:
-            # 2. Aplicamos Deltas (en cm)
+            # 1. Medidas
             d_w = float(item.delta_ancho_cm or 0)
             d_h = float(item.delta_alto_cm or 0)
-            c_base = float(getattr(item, 'cantidad_base', 1.0))
+            ancho_corte = w_pedido + d_w
+            alto_corte = h_pedido + d_h
             
-            # 3. Medidas reales de corte (en cm)
-            ancho_corte_cm = w_pedido + d_w
-            alto_corte_cm = h_pedido + d_h
+            # 2. Precio
+            precio_unit_base = float(item.insumo.precio_costo_unitario or 0) if item.insumo else 0
+
+            # Inicialización por defecto
+            metodo = "NUEVO"
+            id_pieza_usada = None
+            mensaje_opt = ""
+            consumo_final = alto_corte 
+
+            # 3. Lógica de Selección
+            if item.tipo_calculo == 'fijo':
+                metodo = "UNIDAD"
+                consumo_final = float(item.cantidad_base or 1.0)
             
-            consumo_cm = 0
+            elif item.tipo_calculo in ['lineal_alto', 'lineal_ancho', 'superficie']:
+                medida_necesaria = alto_corte if item.tipo_calculo in ['lineal_alto', 'superficie'] else ancho_corte
+                
+                # Intentar buscar retazo solo si es tela
+                if item.tipo_calculo in ['lineal_alto', 'superficie']:
+                    try:
+                        from models import RetazoTela
+                        # DEBUG en consola
+                        print(f"\n--- DEBUG RETAZOS ---")
+                        print(f"Buscando para Insumo ID: {item.id_insumo}")
+                        print(f"Medida Necesaria: {ancho_corte}x{alto_corte}")
 
-            # 4. Lógica de consumo en Centímetros o Cm2
-            if item.tipo_calculo == 'lineal_ancho':
-                # Ej: Tubo de 148.5 cm
-                consumo_cm = ancho_corte_cm * c_base
-            elif item.tipo_calculo == 'lineal_alto':
-                # Ej: Cadena
-                consumo_cm = alto_corte_cm * c_base
-            elif item.tipo_calculo == 'superficie':
-                # Ej: Tela en cm2 (148 x 230 = 34.040 cm2)
-                consumo_cm = (ancho_corte_cm * alto_corte_cm) * c_base
-            elif item.tipo_calculo == 'fijo':
-                # Ej: Mecanismo (unidades)
-                consumo_cm = c_base
+                        retazo = RetazoTela.query.filter(
+                            RetazoTela.id_insumo_base == item.id_insumo,
+                            RetazoTela.estado == 'disponible',
+                            RetazoTela.ancho_cm >= ancho_corte,
+                            RetazoTela.largo_cm >= alto_corte
+                        ).order_by((RetazoTela.ancho_cm * RetazoTela.largo_cm).asc()).first()
 
-            # 5. Costeo (Precio por cm * Cantidad de cm)
-            # Si la tela cuesta $1.20 el cm2, multiplica por 34.040
-            precio_unit = float(item.insumo.precio_costo_unitario or 0) if item.insumo else 0
-            costo_parcial = round(consumo_cm * precio_unit, 2)
+                        if retazo:
+                            print(f"¡ÉXITO! Encontrado Retazo ID: {retazo.id}")
+                            metodo = "RETAZO"
+                            id_pieza_usada = retazo.id
+                            mensaje_opt = "Retazo hallado"
+                            consumo_final = 1.0 
+                        else:
+                            print(f"FALLO: Sin retazos para esa medida.")
+                            metodo = "ROLLO"
+                            consumo_final = alto_corte
+                    except Exception as err: # Cambiado 'e' por 'err' para evitar conflictos
+                        print(f"ERROR EN BÚSQUEDA RETAZO: {str(err)}")
+                        metodo = "ROLLO"
+                        consumo_final = alto_corte
+                else:
+                    metodo = "BARRA"
+                    consumo_final = ancho_corte
+            
+            # --- 4. SEGURO PARA TELA ---
+            if consumo_final == 0 and precio_unit_base > 0:
+                consumo_final = alto_corte
+
+            # 5. COSTEO (Opción A: Cobrar siempre)
+            if item.tipo_calculo in ['lineal_alto', 'superficie']:
+                costo_parcial = round(alto_corte * precio_unit_base, 2)
+            elif item.tipo_calculo == 'lineal_ancho':
+                costo_parcial = round(ancho_corte * precio_unit_base, 2)
+            else:
+                costo_parcial = round(consumo_final * precio_unit_base, 2)
 
             resultado.append({
                 "componente": item.nombre_producto,
-                "consumo_real": round(consumo_cm, 2), # Cantidad de cm o cm2
-                "unidad": "cm2" if item.tipo_calculo == 'superficie' else "cm/un",
-                "medida_corte": f"{ancho_corte_cm} x {alto_corte_cm} cm",
-                "precio_unitario_cm": precio_unit,
-                "costo_parcial": costo_parcial
+                "consumo_real": round(consumo_final, 2),
+                "unidad": "un" if metodo == "UNIDAD" else "cm",
+                "medida_corte": f"{ancho_corte} x {alto_corte} cm",
+                "precio_unitario": precio_unit_base,
+                "costo_parcial": costo_parcial,
+                "metodo": metodo,
+                "id_pieza": id_pieza_usada,
+                "mensaje": mensaje_opt
             })
             
-        return jsonify({
-            "status": "success", 
-            "pedido_cm": f"{w_pedido}x{h_pedido}",
-            "explosion": resultado
-        })
+        # --- EL RETURN VA AQUÍ (FUERA DEL FOR) ---
+        total = round(sum(i['costo_parcial'] for i in resultado), 2)
+        return jsonify({"status": "success", "explosion": resultado, "total_materiales": total})
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"ERROR GENERAL: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     
 # --- 5. OBTENER CATEGORÍAS ---
 @inventory_bp.route('/categories', methods=['GET'])

@@ -8,3 +8,4 @@ db = SQLAlchemy(engine_options={
 from .supply import Supply
 from .supply_category import SupplyCategory
 from .recipe_bom import RecipeBOM
+from .retazo_tela import RetazoTela  
