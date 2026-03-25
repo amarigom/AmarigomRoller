@@ -5,8 +5,23 @@ import CuttingCalculator from "@/components/dashboard/CuttingCalculator"
 import type { FabricRoll } from "@/lib/types/dashboards"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+
 export default function CalculadoraPage() {
   const [rolls, setRolls] = useState<FabricRoll[]>([])
+
+  // 1. DEFINIR LA VARIABLE QUE FALTA
+  const [productList, setProductList] = useState([]);
+  useEffect(() => {
+    const productosPrueba = [
+      { id: 1, name_es: 'Cortina Roller Sunscreen' },
+      { id: 5, name_es: 'Cortina Roller Blackout estandar' },
+      { id: 3, name_es: 'Cortinas Tradicionales' }
+    ];
+    setProductList(productosPrueba);
+    
+    // Si después querés traerlos de la API, usás:
+    // fetch('/api/products').then(res => res.json()).then(data => setProductList(data));
+  }, []);
 
   // Función para cargar o refrescar los rollos
   const loadInventory = async () => {
@@ -56,8 +71,8 @@ export default function CalculadoraPage() {
       </div>
 
       <CuttingCalculator 
-        rolls={rolls} 
-        onDiscountStock={handleDiscountStock} 
+        products={productList }
+        onDiscountStock={(items) => console.log("Confirmado:", items)}
       />
     </div>
   )

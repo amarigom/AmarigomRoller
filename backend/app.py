@@ -3,6 +3,9 @@ from flask_cors import CORS
 from models import db
 from routes.inventory import inventory_bp
 from routes.main import main_bp
+from routes.products import products_bp
+from routes.recipes import recipes_bp
+
 import os
 # --- NUEVAS LÍNEAS PARA LEER EL .ENV ---
 from dotenv import load_dotenv
@@ -38,6 +41,8 @@ db.init_app(app)
 
 app.register_blueprint(main_bp)
 app.register_blueprint(inventory_bp, url_prefix='/api')
+app.register_blueprint(recipes_bp, url_prefix='/api')
+app.register_blueprint(products_bp, url_prefix='/api/products')
 
 with app.app_context():
     db.create_all()
