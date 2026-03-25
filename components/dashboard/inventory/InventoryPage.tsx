@@ -4,27 +4,27 @@ import { useState, useEffect } from "react"
 // Si InventoryView está en la misma carpeta, queda así:
 import InventoryView from "./InventoryView" 
 // Asegurate que la ruta a tus tipos sea la correcta
-import type { FabricRoll } from "@/lib/types/dashboards"
+import type { Supply } from "@/lib/types/dashboards"
 
-const mapBackendToFrontend = (backendRoll: any): FabricRoll => {
+const mapBackendToFrontend = (backendRoll: any): Supply => {
   return {
     id: backendRoll.id,
     name: backendRoll.name,
-    fabricType: backendRoll.category as any,
-    color: backendRoll.code,
+    category: backendRoll.category ,
+    code: backendRoll.code,
     metersLeft: backendRoll.metersLeft,
-    totalMeters: 50, 
+    totalMeters: backendRoll.totalMeters,
     widthCm: backendRoll.widthCm,
     pricePerMeter: backendRoll.pricePerMeter,
     status: backendRoll.status === "in_stock" ? "in-stock" : backendRoll.status,
     // para cumplir con la interfaz FabricRoll si es necesario
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    //createdAt: new Date().toISOString(),
+    //updatedAt: new Date().toISOString()
   }
 }
 
 export default function InventoryPage() {
-  const [rolls, setRolls] = useState<FabricRoll[]>([])
+  const [rolls, setRolls] = useState<Supply[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 

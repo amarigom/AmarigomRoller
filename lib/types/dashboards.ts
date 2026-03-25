@@ -30,18 +30,16 @@ export interface RecipeItem {
 export type FabricType = "blackout" | "sunscreen" | "voile"
 export type StockStatus = "in-stock" | "low-stock" | "critical"
 
-export interface FabricRoll {
-  id: string
-  name: string
-  fabricType: FabricType
-  color: string
-  widthCm: number        // ancho del rollo en cm
-  metersLeft: number     // metros lineales restantes
-  totalMeters: number    // metros originales del rollo
-  pricePerMeter: number  // precio por metro lineal en ARS
-  status: StockStatus
-  createdAt: string
-  updatedAt: string
+// En el Frontend (TypeScript)
+export interface Supply {
+  id: number;
+  code: string;
+  name: string;
+  category: string;// mapea con Fabric typ
+  metersLeft: number;  // Este mapea con 'stock_actual'
+  widthCm: number;    // Este mapea con 'ancho_cm'
+  unit: string;
+  price: number;
 }
 
 // ─── Clientes ───────────────────────────────────────────────────

@@ -24,5 +24,6 @@ class Supply(db.Model):
             "metersLeft": float(self.stock_actual or 0),
             "widthCm": float(self.ancho_cm or 0),
             "unit": self.unidad_medida,
-            "price": float(self.precio_costo_unitario or 0)
+            "price": float(self.precio_costo_unitario or 0),
+            "totalMeters": float(self.stock_actual or 0)
         }
