@@ -2,14 +2,15 @@
 
 import { useState, useEffect } from "react"
 import CuttingCalculator from "@/components/dashboard/CuttingCalculator"
-import type { RecipeItem, Supply, Product } from "@/lib/types/dashboards"
+import type { Supply } from "@/lib/types/dashboards"
+import type { RecipeItem } from "@/lib/types/recipe"
+import type { Product } from "@/lib/types/product"
 // IMPORTANTE: Traemos el mapeador que creamos
 import { mapBackendToRecipe } from "@/lib/mappers" 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
 export default function CalculadoraPage() {
-  // 1. Estados para los datos de AMARIGOM DECO
   const [rolls, setRolls] = useState<Supply[]>([])
   const [productList, setProductList] = useState<Product[]>([]) // La variable que faltaba
   const [recipe, setRecipe] = useState<RecipeItem[]>([]);
@@ -31,7 +32,7 @@ export default function CalculadoraPage() {
       setProductList(productsData);
       setRolls(inventoryData);
     } catch (error) {
-      console.error("Error cargando datos de Tandil:", error);
+      console.error("Error cargando datos de productos e inventario:", error);
     } finally {
       setLoading(false);
     }
