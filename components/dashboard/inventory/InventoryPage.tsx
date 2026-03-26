@@ -16,7 +16,7 @@ const mapBackendToFrontend = (backendSupply: any): Supply => {
     totalCMeters: backendSupply.totalCMeters,
     widthCm: backendSupply.widthCm,
     unit: backendSupply.unit || "m",
-    pricePerCMeter: backendSupply.pricePer||0,
+    pricePerMeter: backendSupply.pricePer||0,
     status: backendSupply.status === "in_stock" ? "in-stock" : backendSupply.status,
     // para cumplir con la interfaz FabricRoll si es necesario
     //createdAt: new Date().toISOString(),
