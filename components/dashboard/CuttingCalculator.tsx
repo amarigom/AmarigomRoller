@@ -149,7 +149,7 @@ export default function CuttingCalculator({
           <option value="">Seleccioná un modelo para calcular...</option>
           {products.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.name_es}
+              {p.name_es || p.name} 
             </option>
           ))}
         </select>

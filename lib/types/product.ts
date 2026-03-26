@@ -1,10 +1,12 @@
 // src/types/product.ts
 
-
-
+// BUSCÁ ESTO Y DEJA LO ASÍ:
 export interface Product {
   id: number;
-  name_es: string; // Coincide con el to_dict de product.py
+  name: string;      // Vercel lo pide así
+  name_es?: string;  // Opcional, por si tu Python manda este
+  category: string;  // ESTO ES LO QUE FALTA y por eso da error
   description?: string;
-  active?: boolean;
+  activo?: boolean;
 }
+
