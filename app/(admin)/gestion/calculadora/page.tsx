@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import CuttingCalculator from "@/components/dashboard/CuttingCalculator"
-import type { Supply } from "@/lib/types/dashboards"
+import type { Supply } from "..lib/types/dashboards"
 import type { RecipeItem } from "@/lib/types/recipe"
 import type { Product } from "@/lib/types/product"
 // IMPORTANTE: Traemos el mapeador que creamos

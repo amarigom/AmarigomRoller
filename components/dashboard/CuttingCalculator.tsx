@@ -5,8 +5,8 @@ import { Calculator, Scissors, Check, Loader2, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // 1. Usamos EXCLUSIVAMENTE los tipos externos (Single Source of Truth)
-import type { Product } from "@/types/product"
-import type { RecipeComponent } from "@/types/recipe"
+import type { Product } from "@/lib/types/product"
+import type { RecipeComponent } from "@/lib/types/recipe"
 
 interface CuttingCalculatorProps {
   products: Product[]; 
