@@ -4,35 +4,29 @@ import { useState } from "react"
 import { Package, Filter, Ruler, Tag, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface InventoryItem {
-  id: number
-  code: string
-  name: string
-  category: string
-  metersLeft: number
-  widthCm: number
-  unit: string
-  price: number
-  lastUpdate: string
-}
+// En InventoryView.tsx
+import type { Supply } from "@/lib/types/dashboards" // O donde lo tengas
 
 interface InventoryViewProps {
-  items: InventoryItem[]
+  supplies: Supply[]  // <--- Cambiamos 'items' o 'rolls' por 'supplies'
+  //onDiscountStock?: (item: any) => void; // El '?' la hace opcional
 }
 
-export default function InventoryView({ items }: InventoryViewProps) {
+
+
+export default function InventoryView({ supplies }: InventoryViewProps) {
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [searchQuery, setSearchQuery] = useState("")
 
   // 1. Obtenemos categorías únicas
-  const categories = ["all", ...new Set(items.map(item => item.category))]
+  const categories = ["all", ...new Set(supplies.map(supply => supply.category))]
 
   // 2. Lógica de filtrado combinada (Categoría + Búsqueda)
-  const filtered = items.filter((item) => {
-    const matchesCategory = filterCategory === "all" || item.category === filterCategory
+  const filtered = supplies.filter((supply) => {
+    const matchesCategory = filterCategory === "all" || supply.category === filterCategory
     const matchesSearch = 
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.code.toLowerCase().includes(searchQuery.toLowerCase())
+      supply.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      supply.code.toLowerCase().includes(searchQuery.toLowerCase())
     
     return matchesCategory && matchesSearch
   })
@@ -44,7 +38,7 @@ export default function InventoryView({ items }: InventoryViewProps) {
         <div>
           <h2 className="font-serif text-2xl text-[#f5f0e8]">Inventario General</h2>
           <p className="text-sm text-[#6b6560] mt-1">
-            {filtered.length} de {items.length} insumos
+            {filtered.length} de {supplies.length} insumos
           </p>
         </div>
 
@@ -95,15 +89,15 @@ export default function InventoryView({ items }: InventoryViewProps) {
 
       {/* Inventory Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map((item) => (
+        {filtered.map((supply) => (
           <div
-            key={item.id}
+            key={supply.id}
             className="bg-[#111111] border border-[#2a2520] rounded-lg p-5 flex flex-col gap-4 hover:border-[#c9a961]/30 transition-all hover:shadow-[0_0_20px_rgba(201,169,97,0.05)] relative group"
           >
             {/* SKU Badge */}
             <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                <span className="text-[9px] bg-[#2a2520] text-[#6b6560] px-2 py-0.5 rounded uppercase tracking-tighter">
-                 {item.code}
+                 {supply.code}
                </span>
             </div>
 
@@ -113,9 +107,9 @@ export default function InventoryView({ items }: InventoryViewProps) {
                 <Package size={18} />
               </div>
               <div className="flex-1 pr-8">
-                <h3 className="text-sm font-medium text-[#f5f0e8] leading-snug line-clamp-1">{item.name}</h3>
+                <h3 className="text-sm font-medium text-[#f5f0e8] leading-snug line-clamp-1">{supply.name}</h3>
                 <p className="text-[10px] text-[#6b6560] mt-0.5 flex items-center gap-1">
-                  <Tag size={10} /> {item.category}
+                  <Tag size={10} /> {supply.category}
                 </p>
               </div>
             </div>
@@ -125,27 +119,27 @@ export default function InventoryView({ items }: InventoryViewProps) {
               <div>
                 <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Stock</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-serif text-[#f5f0e8]">{item.metersLeft}</span>
-                  <span className="text-[10px] text-[#6b6560] lowercase">{item.unit}</span>
+                  <span className="text-xl font-serif text-[#f5f0e8]">{supply.metersLeft}</span>
+                  <span className="text-[10px] text-[#6b6560] lowercase">{supply.unit}</span>
                 </div>
               </div>
               <div className="text-right border-l border-[#2a2520]/50 pl-4">
                 <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Precio</p>
                 <p className="text-lg text-[#7a9b76] font-medium">
-                  ${item.price.toLocaleString('es-AR')}
+                  ${supply.price.toLocaleString('es-AR')}
                 </p>
               </div>
             </div>
 
             {/* Footer */}
             <div className="flex items-center justify-between mt-auto">
-              {item.widthCm > 0 ? (
+              {supply.widthCm > 0 ? (
                 <div className="flex items-center gap-1.5 text-[#6b6560]">
                   <Ruler size={12} />
-                  <span className="text-xs">{item.widthCm} cm ancho</span>
+                  <span className="text-xs">{supply.widthCm} cm ancho</span>
                 </div>
               ) : <div />}
-              <span className="text-[9px] text-[#2a2520] font-mono">{item.lastUpdate}</span>
+              <span className="text-[9px] text-[#2a2520] font-mono">{supply.status}</span>
             </div>
           </div>
         ))}

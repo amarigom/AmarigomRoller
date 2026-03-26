@@ -79,16 +79,16 @@ def test_recipe(product_id):
                 consumo_final = float(item.cantidad_base or 1.0)
 
             # --- 5. COSTEO FINAL ---
-            # Si es lineal (alto/ancho), pasamos de CM a Metros para multiplicar por el precio unitario
+            # Si es lineal (alto/ancho), trabajamos en cm para multiplicar por el precio unitario
             if item.tipo_calculo in ['lineal_alto', 'lineal_ancho', 'superficie']:
-                costo_parcial = round((alto_corte if item.tipo_calculo != 'lineal_ancho' else ancho_corte) / 100 * precio_unit_base, 2)
+                costo_parcial = round((alto_corte if item.tipo_calculo != 'lineal_ancho' else ancho_corte) * precio_unit_base, 2)
             else:
                 costo_parcial = round(consumo_final * precio_unit_base, 2)
 
             # --- 6. MAPEO PARA CUTTINGCALCULATOR.TSX ---
             resultado.append({
                 "componente": nombre_visual,
-                "consumo_m_o_m2": round(consumo_final, 2),
+                "consumo_cm": round(consumo_final, 2),
                 "medida_corte": f"{ancho_corte} x {alto_corte} cm",
                 "precio_unitario": precio_unit_base,
                 "costo_parcial": costo_parcial,
@@ -108,5 +108,5 @@ def test_recipe(product_id):
 
     except Exception as e:
         import traceback
-        print(f"--- ERROR CRÍTICO EN TANDIL ---\n{traceback.format_exc()}")
+        print(f"--- ERROR CRÍTICO  ---\n{traceback.format_exc()}")
         return jsonify({"status": "error", "message": str(e)}), 500

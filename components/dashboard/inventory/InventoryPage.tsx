@@ -6,17 +6,18 @@ import InventoryView from "../InventoryView"
 // Asegurate que la ruta a tus tipos sea la correcta
 import type { Supply } from "@/lib/types/dashboards"
 
-const mapBackendToFrontend = (backendRoll: any): Supply => {
+const mapBackendToFrontend = (backendSupply: any): Supply => {
   return {
-    id: backendRoll.id,
-    name: backendRoll.name,
-    category: backendRoll.category ,
-    code: backendRoll.code,
-    metersLeft: backendRoll.metersLeft,
-    totalMeters: backendRoll.totalMeters,
-    widthCm: backendRoll.widthCm,
-    pricePerMeter: backendRoll.pricePerMeter,
-    status: backendRoll.status === "in_stock" ? "in-stock" : backendRoll.status,
+    id: backendSupply.id,
+    name: backendSupply.name,
+    category: backendSupply.category ,
+    code: backendSupply.code,
+    metersLeft: backendSupply.metersLeft,
+    totalCMeters: backendSupply.totalCMeters,
+    widthCm: backendSupply.widthCm,
+    unit: backendSupply.unit || "m",
+    pricePerCMeter: backendSupply.pricePer||0,
+    status: backendSupply.status === "in_stock" ? "in-stock" : backendSupply.status,
     // para cumplir con la interfaz FabricRoll si es necesario
     //createdAt: new Date().toISOString(),
     //updatedAt: new Date().toISOString()
@@ -24,7 +25,7 @@ const mapBackendToFrontend = (backendRoll: any): Supply => {
 }
 
 export default function InventoryPage() {
-  const [rolls, setRolls] = useState<Supply[]>([])
+  const [supplies, setSupplies] = useState<Supply[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -37,7 +38,7 @@ export default function InventoryPage() {
         if (!response.ok) throw new Error(`Error: ${response.statusText}`)
         
         const data = await response.json()
-        setRolls(data.map(mapBackendToFrontend))
+        setSupplies(data.map(mapBackendToFrontend))
       } catch (err: any) {
         setError(err.message || "Error de conexión")
       } finally {
@@ -69,7 +70,7 @@ export default function InventoryPage() {
 
   return (
     <div className="p-6 lg:p-10 bg-[#0a0a0a] min-h-screen">
-      <InventoryView rolls={rolls} onDiscountStock={() => {}} />
+      <InventoryView supplies={supplies}  />
     </div>
   )
 }

@@ -24,10 +24,11 @@ export interface Supply {
   name: string;
   category: string;
   metersLeft: number;
-  totalMeters: number;
+  totalCMeters: number;
   widthCm: number;
   unit: string;
   status: StockStatus;
+  pricePerCMeter: number;
 }
 
 // Lo que ves vos como Dueño (Extensión)
