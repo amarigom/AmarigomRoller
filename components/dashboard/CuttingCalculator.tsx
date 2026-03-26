@@ -290,7 +290,7 @@ export default function CuttingCalculator({
         const colors = ["#c9a961", "#8e7542", "#5c4d2d", "#3a311d"];
         return (
           <div key={idx} className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors[idx % colors.size] }} />
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors[idx % colors.length] }} />
             <span className="text-[9px] text-[#6b6560]">
               {item.componente.split(' ')[0]} ({percentage.toFixed(0)}%)
             </span>
