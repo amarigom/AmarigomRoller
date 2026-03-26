@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Plus, X, Loader2 } from "lucide-react"
 import InventoryView from "@/components/dashboard/InventoryView"
-import { InventoryItem } from "@/lib/types/dashboards"
+import { Supply } from "@/lib/types/dashboards"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
@@ -13,7 +13,7 @@ interface Categoria {
 }
 
 export default function InventarioPage() {
-  const [items, setItems] = useState<InventoryItem[]>([])
+  const [items, setItems] = useState<Supply[]>([])
   const [categorias, setCategorias] = useState<Categoria[]>([])
   const [loading, setLoading] = useState(true)
   const [issubmitting, setIsSubmitting] = useState(false) // Para evitar doble click
@@ -38,7 +38,27 @@ export default function InventarioPage() {
       ]);
       const dataInv = await resInv.json()
       const dataCats = await resCats.json()
-      setItems(dataInv)
+
+      // MAPEO PARA CUMPLIR CON LA INTERFAZ SUPPLY Y EVITAR EL ERROR DE FECHA
+      const mappedItems: Supply[] = dataInv.map((inv: any) => ({
+  id: inv.id,
+  code: inv.code,           // Tu JSON ya trae 'code'
+  name: inv.name,           // Tu JSON ya trae 'name'
+  category: inv.category,   // Tu JSON ya trae 'category'
+  metersLeft: inv.metersLeft, // Tu JSON ya trae 'metersLeft'
+  totalMeters: inv.totalMeters || inv.metersLeft,
+  widthCm: inv.widthCm || 0,
+  unit: inv.unit || "unidad",
+  
+  // CLAVE: En tu JSON la propiedad se llama 'price'
+  pricePerMeter: inv.price || 0, 
+  
+  status: inv.metersLeft > 0 ? "En Stock" : "Sin Stock",
+  lastUpdate: new Date()
+
+}));
+        
+      setItems(mappedItems)
       setCategorias(dataCats)
     } catch (err) {
       console.error("Error en el fetch:", err)
@@ -205,7 +225,7 @@ export default function InventarioPage() {
           <p className="text-[#6b6560] font-serif italic">Sincronizando con Neon DB...</p>
         </div>
       ) : (
-        <InventoryView items={items} />
+        <InventoryView supplies={items} />
       )}
     </div>
   )

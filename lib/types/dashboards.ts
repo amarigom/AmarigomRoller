@@ -28,7 +28,7 @@ export interface Supply {
   widthCm: number;
   unit: string;
   status: StockStatus;
-  pricePerCMeter: number;
+  pricePerMeter: number;
 }
 
 // Lo que ves vos como Dueño (Extensión)

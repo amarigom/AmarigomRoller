@@ -9,7 +9,7 @@ import type { Supply } from "@/lib/types/dashboards" // O donde lo tengas
 
 interface InventoryViewProps {
   supplies: Supply[]  // <--- Cambiamos 'items' o 'rolls' por 'supplies'
-  //onDiscountStock?: (item: any) => void; // El '?' la hace opcional
+ onDiscountStock?: (item: any) => void; // El '?' la hace opcional
 }
 
 
@@ -126,7 +126,7 @@ export default function InventoryView({ supplies }: InventoryViewProps) {
               <div className="text-right border-l border-[#2a2520]/50 pl-4">
                 <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Precio</p>
                 <p className="text-lg text-[#7a9b76] font-medium">
-                  ${supply.price.toLocaleString('es-AR')}
+                  ${supply.pricePerMeter.toLocaleString('es-AR')}
                 </p>
               </div>
             </div>
