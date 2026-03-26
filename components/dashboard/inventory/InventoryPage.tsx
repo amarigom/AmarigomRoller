@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 // Si InventoryView está en la misma carpeta, queda así:
-import InventoryView from "./InventoryView" 
+import InventoryView from "../InventoryView" 
 // Asegurate que la ruta a tus tipos sea la correcta
 import type { Supply } from "@/lib/types/dashboards"
 

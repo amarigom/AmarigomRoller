@@ -15,7 +15,7 @@ PRODUCTS = [
         'price': 15000
     },
     {
-        'id': 2,
+        'id': 5,
         'name_es': 'Cortina Roller Blackout',
         'name_en': 'Blackout Roller Blind',
         'description_es': 'Bloqueo total de luz para máxima privacidad',

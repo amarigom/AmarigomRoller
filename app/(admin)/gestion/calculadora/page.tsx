@@ -2,79 +2,83 @@
 
 import { useState, useEffect } from "react"
 import CuttingCalculator from "@/components/dashboard/CuttingCalculator"
-import type { Supply } from "@/lib/types/dashboards"
+import type { RecipeItem, Supply, Product } from "@/lib/types/dashboards"
+// IMPORTANTE: Traemos el mapeador que creamos
+import { mapBackendToRecipe } from "@/lib/mappers" 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
 export default function CalculadoraPage() {
+  // 1. Estados para los datos de AMARIGOM DECO
   const [rolls, setRolls] = useState<Supply[]>([])
+  const [productList, setProductList] = useState<Product[]>([]) // La variable que faltaba
+  const [recipe, setRecipe] = useState<RecipeItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 1. DEFINIR LA VARIABLE QUE FALTA
-  const [productList, setProductList] = useState<Supply[]>([]);
+  // 2. Cargar Productos e Inventario al iniciar
+  const loadInitialData = async () => {
+    setLoading(true);
+    try {
+      // Traemos productos e inventario en paralelo para ganar velocidad
+      const [resProducts, resInventory] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/products`),
+        fetch(`${API_BASE_URL}/api/inventory`)
+      ]);
+
+      const productsData = await resProducts.json();
+      const inventoryData = await resInventory.json();
+
+      setProductList(productsData);
+      setRolls(inventoryData);
+    } catch (error) {
+      console.error("Error cargando datos de Tandil:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const productos_Prueba = [
-  
-      { id: 4, code: '4', name: 'Cortina Roller Sunscrem estandar',category:'',metersLeft:0,widthCm:0,unit:'',price:0 },
-      { id: 5, code: '5', name: 'Cortina Roller Blackout estandar',category:'',metersLeft:0,widthCm:0,unit:'',price:0 },
-      { id: 6, code: '6', name: 'Cortinas Tradicionales',category:'',metersLeft:0,widthCm:0,unit:'',price:0 }
-    ];
-    setProductList(productos_Prueba);
-    
-    // Si después querés traerlos de la API, usás:
-    // fetch('/api/products').then(res => res.json()).then(data => setProductList(data));
+    loadInitialData();
   }, []);
 
-  // Función para cargar o refrescar los rollos
-  const loadInventory = async () => {
+  // 3. Manejador de selección de producto (USA EL MAPEADOR)
+  const handleProductSelect = async (id: number) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/inventory`);
+      const res = await fetch(`${API_BASE_URL}/api/recipes/${id}`);
       const data = await res.json();
-      setRolls(data);
+      
+      // Aquí usamos el "blindaje" de TypeScript:
+      const cleanRecipe = data.map(mapBackendToRecipe);
+      setRecipe(cleanRecipe);
     } catch (error) {
-      console.error("Error cargando inventario:", error);
+      console.error("Error al obtener la receta:", error);
     }
   };
 
-  useEffect(() => {
-    loadInventory();
-  }, []);
-
-  // Esta es la función que llama el componente cuando confirmás un corte
-  const handleDiscountStock = async (rollId: string, meters: number) => {
-    try {
-      const response = await fetch("/api/inventory", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          id: rollId, 
-          usedMeters: meters 
-        }),
-      });
-
-      if (response.ok) {
-        const updatedInventory = await response.json();
-        setRolls(updatedInventory); // Actualiza la lista localmente
-        alert("¡Corte registrado! El stock de AMARIGOM DECO ha sido actualizado.");
-      } else {
-        alert("No se pudo actualizar el stock. Verificá la conexión.");
-      }
-    } catch (error) {
-      console.error("Error en la operación:", error);
-      alert("Error crítico al procesar el descuento.");
-    }
+  // 4. Función que se dispara al "Confirmar y Cortar"
+  const handleDiscountStock = async (explosion: any) => {
+    // Aquí podrías refrescar el inventario después de que el backend 
+    // de Neon confirme el descuento de stock
+    console.log("Descontando stock en Neon para:", explosion);
+    await loadInitialData(); // Refrescamos los números de los rollos
   };
+
+  if (loading) return <div className="p-10 text-[#c9a961]">Cargando taller...</div>;
 
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-8">
         <h1 className="font-serif text-3xl text-[#f5f0e8]">Calculadora de Cortes</h1>
-        <p className="text-[#6b6560]">Calculá medidas y descontá stock automáticamente</p>
+        <p className="text-[#6b6560]">Gestión de producción integrada con Neon</p>
       </div>
 
       <CuttingCalculator 
-        products={productList }
-        onDiscountStock={(items) => console.log("Confirmado:", items)}
+        products={productList}
+        onDiscountStock={handleDiscountStock}
       />
+      
+      {/* Opcional: Podrías pasarle los 'rolls' si la calculadora 
+          necesita mostrar el stock actual de las telas */}
     </div>
   )
 }

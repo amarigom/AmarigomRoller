@@ -1,99 +1,96 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import { Calculator, Scissors, AlertTriangle, Check, Loader2, DollarSign, Sparkles } from "lucide-react"
+import { Calculator, Scissors, Check, Loader2, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface RecipeComponent {
-  componente: string
-  consumo_m_o_m2: number
-  medida_corte: string
-  precio_unitario: number
-  costo_parcial: number
-  metodo?: "ROLLO" | "RETAZO" 
-  id_retazo?: number         
-}
+// 1. Usamos EXCLUSIVAMENTE los tipos externos (Single Source of Truth)
+import type { Product } from "@/types/product"
+import type { RecipeComponent } from "@/types/recipe"
 
-interface Product {
-  id: number;
-  name_es: string;
-}
 interface CuttingCalculatorProps {
   products: Product[]; 
   onDiscountStock: (items: RecipeComponent[]) => void;
   productId?: number; 
 }
 
-export default function CuttingCalculator({ products = [], productId, onDiscountStock }: CuttingCalculatorProps) {
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+
+export default function CuttingCalculator({ 
+  products = [], 
+  productId, 
+  onDiscountStock 
+}: CuttingCalculatorProps) {
+  
+  // Estados
   const [windowWidth, setWindowWidth] = useState("")
   const [windowHeight, setWindowHeight] = useState("")
-  const [selectedRollId, setSelectedRollId] = useState("")
   const [budget, setBudget] = useState("")
   const [explosion, setExplosion] = useState<RecipeComponent[] | null>(null)
   const [optimization, setOptimization] = useState<{mensaje: string, id: number} | null>(null)
   const [loading, setLoading] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
   
-const handleConfirmProduction = async () => {
-  if (!explosion) return; // Si no hay receta calculada, no hacemos nada
-  setLoading(true);
-  try {
-    // LLAMADA AL BACKEND PARA DESCONTAR DE NEON
-    const response = await fetch('/api/confirm-production', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        explosion: explosion,
-        productId: selectedProductId 
-      })
-    });
+  // Sincronizamos el select con la prop si viene de afuera
+  const [selectedProductId, setSelectedProductId] = useState<string>(productId?.toString() || "");
 
-    const data = await response.json();
+  // --- ACCIÓN: Confirmar Producción ---
+  const handleConfirmProduction = async () => {
+    if (!explosion || !selectedProductId) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/confirm-production`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          explosion: explosion,
+          productId: selectedProductId 
+        })
+      });
 
-    if (data.status === "success") {
-      // SI NEON SE ACTUALIZÓ OK:
-      setConfirmed(true);
-      
-      // Avisamos al componente padre por si quiere refrescar algo visualmente
-      onDiscountStock(explosion);
-      
-      // Limpiamos después de 3 segundos para el próximo pedido
-      setTimeout(() => {
-        setConfirmed(false);
-        setExplosion(null);
-        setWindowWidth("");
-        setWindowHeight("");
-      }, 3000);
-    } else {
-      alert("Error al actualizar base de datos: " + data.message);
+      const data = await response.json();
+
+      if (data.status === "success") {
+        setConfirmed(true);
+        onDiscountStock(explosion);
+        
+        setTimeout(() => {
+          setConfirmed(false);
+          setExplosion(null);
+          setWindowWidth("");
+          setWindowHeight("");
+        }, 3000);
+      } else {
+        alert("Error: " + data.message);
+      }
+    } catch (error) {
+      console.error("Error de conexión:", error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error de conexión:", error);
-    alert("No se pudo conectar con el servidor para descontar stock.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-
+  // --- ACCIÓN: Calcular Receta (Explosión) ---
   const calcularReceta = async () => {
-    if (!windowWidth || !windowHeight|| !selectedProductId) return;
+    if (!windowWidth || !windowHeight || !selectedProductId) return;
     setLoading(true)
     try {
-      // Enviamos ancho y alto para que el backend busque retazos
-      const response = await fetch(`/api/test-recipe/${selectedProductId}?w=${windowWidth}&h=${windowHeight}`)
-    
-    if (!response.ok) throw new Error("Error en la respuesta del servidor");
+      const response = await fetch(`${API_BASE_URL}/api/test-recipe/${selectedProductId}?w=${windowWidth}&h=${windowHeight}`)
+      
+      if (!response.ok) throw new Error("Error en el servidor");
 
-    const data = await response.json()
+      const data = await response.json()
       
       if (data.status === "success") {
         setExplosion(data.explosion)
-        // Si el backend encontró un retazo para la tela, lo guardamos para el banner
-        const telaOpt = data.explosion.find((item: any) => item.metodo === "RETAZO")
-        if (telaOpt) {
-          setOptimization({ mensaje: telaOpt.mensaje, id: telaOpt.id_retazo })
+        
+        // Lógica de optimización de retazos
+        const telaOpt = data.explosion.find((item: RecipeComponent) => item.metodo === "RETAZO")
+        if (telaOpt && telaOpt.id_retazo) {
+          setOptimization({ 
+            mensaje: telaOpt.mensaje || "Retazo disponible", 
+            id: telaOpt.id_retazo 
+          })
         } else {
           setOptimization(null)
         }
@@ -105,6 +102,7 @@ const handleConfirmProduction = async () => {
     }
   }
 
+  // Debounce para evitar llamadas excesivas a Flask
   useEffect(() => {
     const timer = setTimeout(() => {
       if (windowWidth && windowHeight && selectedProductId) calcularReceta()
@@ -112,9 +110,9 @@ const handleConfirmProduction = async () => {
     return () => clearTimeout(timer)
   }, [windowWidth, windowHeight, selectedProductId])
 
+  // Cálculos de costos
   const totalCost = useMemo(() => {
-    if (!explosion) return 0
-    return explosion.reduce((acc, item) => acc + item.costo_parcial, 0)
+    return explosion?.reduce((acc, item) => acc + item.costo_parcial, 0) || 0
   }, [explosion])
 
   const isOverBudget = useMemo(() => {
@@ -125,20 +123,20 @@ const handleConfirmProduction = async () => {
   return (
     <div className="flex flex-col gap-6">
       
-      {/* 1. BANNER DE OPTIMIZACIÓN (Solo si el backend detecta retazo) */}
+      {/* 1. Banner de Optimización */}
       {optimization && (
-        <div className="bg-[#c9a961]/10 border border-[#c9a961]/30 p-4 rounded-xl flex items-center gap-4 animate-pulse">
+        <div className="bg-[#c9a961]/10 border border-[#c9a961]/30 p-4 rounded-xl flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
           <div className="bg-[#c9a961] p-2 rounded-full text-black">
             <Sparkles size={20} />
           </div>
           <div className="flex-1">
-            <p className="text-[#c9a961] font-bold text-sm">¡Ahorro Detectado!</p>
+            <p className="text-[#c9a961] font-bold text-sm">¡Ahorro Detectado en el Taller!</p>
             <p className="text-[#f5f0e8] text-xs italic">{optimization.mensaje}</p>
           </div>
         </div>
       )}
 
-      {/* 2. SELECTOR DE MODELO (Ocupa todo el ancho arriba) */}
+      {/* 2. Selector de Producto */}
       <div className="bg-[#111111] border border-[#2a2520] rounded-xl p-5">
         <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold tracking-widest">
           Modelo de Cortina / Receta
@@ -157,10 +155,9 @@ const handleConfirmProduction = async () => {
         </select>
       </div>
 
-      {/* 3. GRID PRINCIPAL (Inputs a la izquierda, Resultados a la derecha) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* COLUMNA IZQUIERDA: INPUTS DE MEDIDAS */}
+        {/* COLUMNA IZQUIERDA: INPUTS */}
         <div className="bg-[#111111] border border-[#2a2520] rounded-xl p-6 flex flex-col gap-6">
           <h3 className="text-[#c9a961] font-serif text-lg flex items-center gap-2">
             <Calculator size={18} /> Medidas Finales
@@ -199,26 +196,12 @@ const handleConfirmProduction = async () => {
               "bg-[#c9a961] text-black hover:bg-[#d4b574] active:scale-95 disabled:opacity-30"
             )}
           >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={20} />
-                <span>Procesando en Neon...</span>
-              </>
-            ) : confirmed ? (
-              <>
-                <Check size={20} />
-                <span>Stock Actualizado</span>
-              </>
-            ) : (
-              <>
-                <Scissors size={20} />
-                <span>Confirmar y Cortar</span>
-              </>
-            )}
+            {loading ? <Loader2 className="animate-spin" size={20} /> : confirmed ? <Check size={20} /> : <Scissors size={20} />}
+            <span>{loading ? "Procesando en Neon..." : confirmed ? "Stock Actualizado" : "Confirmar y Cortar"}</span>
           </button>
         </div>
 
-        {/* COLUMNA DERECHA: DESGLOSE DE MATERIALES */}
+        {/* COLUMNA DERECHA: DESGLOSE */}
         <div className="bg-[#111111] border border-[#2a2520] rounded-xl p-6 flex flex-col">
           <h3 className="text-[#6b6560] font-serif text-lg mb-4 flex justify-between items-center">
             Desglose de Materiales
@@ -258,32 +241,71 @@ const handleConfirmProduction = async () => {
             )}
           </div>
 
-          {/* 4. TOTALES Y PRECIO SUGERIDO */}
           {explosion && (
-            <div className={cn(
-                "mt-6 pt-4 border-t border-[#2a2520]",
-                isOverBudget && "border-red-900/50"
-            )}>
+            <div className={cn("mt-6 pt-4 border-t border-[#2a2520]", isOverBudget && "border-red-900/50")}>
               <div className="flex justify-between items-end">
                 <div>
-                  <p className={cn("text-[9px] uppercase tracking-widest mb-1", isOverBudget ? "text-red-400" : "text-[#6b6560]")}>
-                    {isOverBudget ? "Presupuesto Excedido" : "Costo Total (Insumos)"}
-                  </p>
-                  <p className={cn("text-2xl font-serif", isOverBudget ? "text-red-500" : "text-white")}>
-                    ${totalCost.toLocaleString('es-AR')}
-                  </p>
+                  <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Costo Total</p>
+                  <p className="text-2xl text-white font-serif">${totalCost.toLocaleString('es-AR')}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] text-[#6b6560] uppercase mb-1 font-bold">PVP Sugerido (40% Margen)</p>
+                  <p className="text-[9px] text-[#6b6560] uppercase mb-1 font-bold">PVP Sugerido (40%)</p>
                   <p className="text-xl text-[#c9a961] font-bold">
                     ${(totalCost / 0.6).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
                   </p>
+                  {/* 5. VISUALIZACIÓN DE COMPOSICIÓN DE COSTOS */}
+{explosion && explosion.length > 0 && (
+  <div className="mt-8 space-y-3">
+    <div className="flex justify-between items-center">
+      <p className="text-[10px] text-[#6b6560] uppercase font-bold tracking-widest">
+        Distribución de Gastos
+      </p>
+      <p className="text-[10px] text-[#c9a961] font-mono">
+        {explosion.length} ítems analizados
+      </p>
+    </div>
+    
+    {/* Barra de Progreso Segmentada */}
+    <div className="h-2 w-full bg-[#1a1a1a] rounded-full overflow-hidden flex">
+      {explosion.map((item, idx) => {
+        const percentage = (item.costo_parcial / totalCost) * 100;
+        // Colores alternados dentro de la gama de AMARIGOM
+        const colors = ["#c9a961", "#8e7542", "#5c4d2d", "#3a311d"];
+        return (
+          <div
+            key={idx}
+            style={{ width: `${percentage}%`, backgroundColor: colors[idx % colors.size] }}
+            className="h-full transition-all duration-500 hover:brightness-125 cursor-help"
+            title={`${item.componente}: ${percentage.toFixed(1)}%`}
+          />
+        );
+      })}
+    </div>
+
+    {/* Mini Leyenda Dinámica */}
+    <div className="flex flex-wrap gap-x-4 gap-y-1">
+      {explosion.slice(0, 4).map((item, idx) => {
+        const percentage = (item.costo_parcial / totalCost) * 100;
+        if (percentage < 5) return null; // No mostramos los que son casi despreciables
+        const colors = ["#c9a961", "#8e7542", "#5c4d2d", "#3a311d"];
+        return (
+          <div key={idx} className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors[idx % colors.size] }} />
+            <span className="text-[9px] text-[#6b6560]">
+              {item.componente.split(' ')[0]} ({percentage.toFixed(0)}%)
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
                 </div>
               </div>
             </div>
           )}
-        </div> {/* Fin Columna Derecha */}
-      </div> {/* Fin Grid Principal */}
+        </div>
+      </div>
     </div> 
   );
 }

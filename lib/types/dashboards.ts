@@ -12,34 +12,29 @@ export interface InventoryItem {
   lastUpdate: string;
 }
 
-export interface RecipeItem {
-  id: number;
-  component_name: string;
-  width_delta: number;
-  height_delta: number;
-  base_quantity: number;
-  calculation_type: 'lineal_ancho' | 'lineal_alto' | 'fijo' | 'superficie';
-  description?: string;
-  sku?: string;
-  // Estos campos los calculamos en el useMemo, no vienen del API:
-  finalW_cm?: number;
-  finalH_cm?: number;
-  consumption?: number;
-}
 
 export type FabricType = "blackout" | "sunscreen" | "voile"
 export type StockStatus = "in-stock" | "low-stock" | "critical"
 
 // En el Frontend (TypeScript)
+// Lo que ve todo el mundo en AMARIGOM DECO
 export interface Supply {
   id: number;
   code: string;
   name: string;
-  category: string;// mapea con Fabric typ
-  metersLeft: number;  // Este mapea con 'stock_actual'
-  widthCm: number;    // Este mapea con 'ancho_cm'
+  category: string;
+  metersLeft: number;
+  totalMeters: number;
+  widthCm: number;
   unit: string;
-  price: number;
+  status: StockStatus;
+}
+
+// Lo que ves vos como Dueño (Extensión)
+export interface AdminSupply extends Supply {
+  costPrice?: number;        // Opcional, por si el JSON no lo trae
+  lastRestockDate?: string;
+  supplierName?: string;
 }
 
 // ─── Clientes ───────────────────────────────────────────────────
