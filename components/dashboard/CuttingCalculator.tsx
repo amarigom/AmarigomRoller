@@ -274,7 +274,7 @@ export default function CuttingCalculator({
         return (
           <div
             key={idx}
-            style={{ width: `${percentage}%`, backgroundColor: colors[idx % colors.size] }}
+            style={{ width: `${percentage}%`, backgroundColor: colors[idx % colors.length] }}
             className="h-full transition-all duration-500 hover:brightness-125 cursor-help"
             title={`${item.componente}: ${percentage.toFixed(1)}%`}
           />
