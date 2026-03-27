@@ -13,7 +13,7 @@ def test_recipe(product_id):
         
         components = RecipeBOM.query.filter_by(id_padre=product_id).all()
         if not components:
-            return jsonify({"status": "error", "message": f"No hay receta para el ID {product_id}"}), 404
+            return jsonify({"status": "error", "message": f"No hay receta para el ID {product_id}","message": f"El producto {product_id} aún no tiene definida su explosión de materiales."}), 404
 
         # 2. Captura de medidas desde la URL
         try:
@@ -110,3 +110,36 @@ def test_recipe(product_id):
         import traceback
         print(f"--- ERROR CRÍTICO  ---\n{traceback.format_exc()}")
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+    
+@recipes_bp.route('/recipes/<int:product_id>', methods=['GET'])
+def get_recipe_base(product_id):
+    try:
+        # 1. Buscamos los componentes en la tabla RecipeBOM
+        components = RecipeBOM.query.filter_by(id_padre=product_id).all()
+        
+        if not components:
+            return jsonify({
+                "status": "error", 
+                "message": f"El producto {product_id} no tiene una receta definida en la base de datos."
+            }), 404
+
+        # 2. Mapeamos los datos para que el Frontend los reciba limpios
+        resultado = []
+        for item in components:
+            # Usamos getattr por seguridad, igual que en tu test_recipe
+            insumo_obj = getattr(item, 'insumo', None)
+            nombre = getattr(insumo_obj, 'name', None) or getattr(item, 'nombre_producto', "Insumo")
+            
+            resultado.append({
+                "id": item.id,
+                "componente": nombre,
+                "cantidad_base": float(item.cantidad_base or 0.0)
+            })
+
+        return jsonify(resultado), 200
+
+    except Exception as e:
+        import traceback
+        print(f"--- ERROR EN GET_RECIPE ---\n{traceback.format_exc()}")
+        return jsonify({"status": "error", "message": str(e)}), 500    

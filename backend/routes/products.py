@@ -23,7 +23,7 @@ def get_product(product_id):
         product = Product.query.get(product_id)
         if product:
             return jsonify(product.to_dict())
-        return jsonify({'error': 'Producto no encontrado'}), 404
+        return jsonify({'error': 'Producto no encontrado'}, {"message": f"El producto {product_id} aún no tiene definida su explosión de materiales."}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
