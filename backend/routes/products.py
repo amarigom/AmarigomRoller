@@ -1,80 +1,37 @@
-from flask import Blueprint, render_template, jsonify
+from flask import Blueprint, jsonify
+from models import Product # Importamos el modelo que se conecta a Neon
 
-products_bp = Blueprint('products', __name__)
+# 1. Definimos el Blueprint con un nombre único
+products_bp = Blueprint('products_api', __name__)
 
-# Datos de productos (en producción esto vendría de una base de datos)
-PRODUCTS = [
-    {
-        'id': 1,
-        'name_es': 'Cortina Roller Sunscreen',
-        'name_en': 'Sunscreen Roller Blind',
-        'description_es': 'Filtra la luz solar manteniendo la visibilidad hacia el exterior',
-        'description_en': 'Filters sunlight while maintaining outward visibility',
-        'image': '/static/images/products/sunscreen.jpg',
-        'category': 'sunscreen',
-        'price': 15000
-    },
-    {
-        'id': 5,
-        'name_es': 'Cortina Roller Blackout',
-        'name_en': 'Blackout Roller Blind',
-        'description_es': 'Bloqueo total de luz para máxima privacidad',
-        'description_en': 'Complete light blocking for maximum privacy',
-        'image': '/static/images/products/blackout.jpg',
-        'category': 'blackout',
-        'price': 18000
-    },
-    {
-        'id': 3,
-        'name_es': 'Cortinas Tradicionales',
-        'name_en': 'Traditional Curtains',
-        'description_es': 'Elegancia clásica con telas de alta calidad',
-        'description_en': 'Classic elegance with high-quality fabrics',
-        'image': '/static/images/products/traditional.jpg',
-        'category': 'traditional',
-        'price': 25000
-    },
-    {
-        'id': 101,
-        'name_es': 'Combo Sunscreen',
-        'name_en': 'Sunscreen Combo',
-        'description_es': '2 cortinas roller sunscreen de hasta 1.5m x 2m',
-        'description_en': '2 sunscreen roller blinds up to 1.5m x 2m',
-        'image': '/static/images/products/sunscreen.jpg',
-        'category': 'promo',
-        'price': 22500,
-        'original_price': 30000,
-        'discount': 25
-    },
-    {
-        'id': 102,
-        'name_es': 'Blackout Premium',
-        'name_en': 'Premium Blackout',
-        'description_es': 'Cortina blackout premium con instalación incluida',
-        'description_en': 'Premium blackout blind with installation included',
-        'image': '/static/images/products/blackout.jpg',
-        'category': 'promo',
-        'price': 17500,
-        'original_price': 25000,
-        'discount': 30
-    }
-]
-
-@products_bp.route('/')
+@products_bp.route('', methods=['GET'], strict_slashes=False)
 def list_products():
-    """Lista todos los productos"""
-    return jsonify(PRODUCTS)
+    """Trae los productos reales de la tabla de Neon para la calculadora"""
+    try:
+        # Consultamos la tabla 'productos' en Neon
+        # Usamos el to_dict() que mapeamos para React (con 'name' y 'category')
+        db_products = Product.query.filter_by(activo=True).all()
+        return jsonify([p.to_dict() for p in db_products])
+    except Exception as e:
+        print(f" Error en Neon (AMARIGOM DECO): {e}")
+        return jsonify({"error": "No se pudo conectar con la base de datos"}), 500
 
-@products_bp.route('/<int:product_id>')
+@products_bp.route('/<int:product_id>', methods=['GET'])
 def get_product(product_id):
-    """Obtiene un producto específico"""
-    product = next((p for p in PRODUCTS if p['id'] == product_id), None)
-    if product:
-        return jsonify(product)
-    return jsonify({'error': 'Producto no encontrado'}), 404
+    """Busca un producto específico por su ID manual en Neon"""
+    try:
+        product = Product.query.get(product_id)
+        if product:
+            return jsonify(product.to_dict())
+        return jsonify({'error': 'Producto no encontrado'}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-@products_bp.route('/promos')
+@products_bp.route('/promos', methods=['GET'])
 def list_promos():
-    """Lista solo productos en promoción"""
-    promos = [p for p in PRODUCTS if p.get('category') == 'promo']
-    return jsonify(promos)
+    """Lista productos cuya categoría sea 'promo' en Neon"""
+    try:
+        promos = Product.query.filter_by(categoria='promo', activo=True).all()
+        return jsonify([p.to_dict() for p in promos])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -25,7 +25,10 @@ export default function CalculadoraPage() {
         fetch(`${API_BASE_URL}/api/products`),
         fetch(`${API_BASE_URL}/api/inventory`)
       ]);
-
+      // BLINDAJE: Si no es OK, no intentamos procesar el JSON
+      if (!resProducts.ok || !resInventory.ok) {
+      throw new Error(`Error en servidor: P:${resProducts.status} I:${resInventory.status}`);
+    }
       const productsData = await resProducts.json();
       const inventoryData = await resInventory.json();
 
