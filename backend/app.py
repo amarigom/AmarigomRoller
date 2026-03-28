@@ -33,10 +33,11 @@ app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "amarigom-secret-2026")
 # --- CONFIGURACIÓN DE CORS (EL PORTERO) ---
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000"],
+        "origins": ["http://localhost:3000","https://amarigom-roller-frontend1-d9ivesnu3-andreas-projects-71d69b69.vercel.app"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept"],
-        "supports_credentials": True
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"]
     }
 })
 
