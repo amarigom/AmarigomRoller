@@ -6,9 +6,11 @@ import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Phone } from "lucide-react";
+import { Cliente } from '@/lib/types/client';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
 export default function ClientesPage() {
-  const [clientes, setClientes] = useState([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [busqueda, setBusqueda] = useState("");
 
   // 1. RESPONSABILIDAD: Cargar datos (Fetch)
