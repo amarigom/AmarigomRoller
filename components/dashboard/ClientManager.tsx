@@ -2,9 +2,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/sections/table"; // Ajustá la ruta según tu carpeta
-import { Button } from "@/components/sections/button";
-import { Input } from "@/components/sections/input";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table"; // Ajustá la ruta según tu carpeta
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Plus, Search, Phone } from "lucide-react";
 
 export default function ClientesPage() {
