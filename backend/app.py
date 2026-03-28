@@ -1,24 +1,19 @@
-from flask import Flask, render_template, request, jsonify, session
-from flask_cors import CORS
-from database import db 
-# 2. IMPORTAMOS LOS BLUEPRINTS (ahora no habrá círculo porque db nace aparte)
-from routes.inventory import inventory_bp
-from routes.main import main_bp
-from routes.products import products_bp
-from routes.recipes import recipes_bp
-from routes.clients import clients_bp
 import os
-# --- NUEVAS LÍNEAS PARA LEER EL .ENV ---
+from flask import Flask
+from flask_cors import CORS
+from models import db
+# Asegurate de que estas importaciones coincidan con tus nombres de archivos
+from routes.main import main_bp
+from routes.inventory import inventory_bp
+from routes.recipes import recipes_bp
+from routes.products import products_bp
+from routes.clients import clients_bp
 from dotenv import load_dotenv
-
-# Esto carga las variables del archivo .env a la memoria
 load_dotenv() 
-# ---------------------------------------
 
 app = Flask(__name__)
-
-# --- CONFIGURACIÓN DE DB ---
-# Ahora os.environ.get sí podrá encontrar la variable
+app.url_map.strict_slashes = False
+# --- CONFIGURACIÓN DE BASE DE DATOS ---
 uri = os.environ.get("DATABASE_URL")
 
 if not uri:
@@ -26,7 +21,7 @@ if not uri:
     print(f"Directorio actual: {os.getcwd()}")
     raise ValueError("ERROR CRÍTICO: La variable DATABASE_URL no está configurada.")
 
-# Corrección obligatoria para SQLAlchemy (Neon usa postgres://)
+
 if uri and uri.startswith("postgres://"):
     uri = uri.replace("postgres://", "postgresql://", 1)
 
@@ -35,21 +30,31 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "amarigom-secret-2026")
 
 
+# --- CONFIGURACIÓN DE CORS (EL PORTERO) ---
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"],
+        "supports_credentials": True
+    }
+})
 
-CORS(app, resources={r"/api/*": {"origins": "*"}})
-
+# Inicializamos la DB
 db.init_app(app)
 
+# --- REGISTRO DE BLUEPRINTS ---
+# IMPORTANTE: Cambiamos el prefix de clientes para que no choque con la barra final
 app.register_blueprint(main_bp)
 app.register_blueprint(inventory_bp, url_prefix='/api')
 app.register_blueprint(recipes_bp, url_prefix='/api')
 app.register_blueprint(products_bp, url_prefix='/api/products')
 app.register_blueprint(clients_bp, url_prefix='/api/clients')
 
+# Creamos las tablas en Neon si no existen
 with app.app_context():
     db.create_all()
 
-app = app
-
 if __name__ == '__main__':
-    app.run()
+    # Usamos 127.0.0.1 para que coincida con tu prueba de PowerShell
+    app.run(host='127.0.0.1', port=5000, debug=True)
