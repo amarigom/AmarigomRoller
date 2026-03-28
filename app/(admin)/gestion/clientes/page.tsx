@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-// Importante: Ajustá estas rutas a donde realmente estén tus componentes UI
+import {Cliente} from "@/lib/types/client";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
 
 export default function ClientesPage() {
-  const [clientes, setClientes] = useState([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
-
+  
   // 1. CARGAR DATOS DESDE EL BACKEND
   useEffect(() => {
     const fetchClientes = async () => {
