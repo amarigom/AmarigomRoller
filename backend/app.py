@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
-from models import db
+from database import db 
+# 2. IMPORTAMOS LOS BLUEPRINTS (ahora no habrá círculo porque db nace aparte)
 from routes.inventory import inventory_bp
 from routes.main import main_bp
 from routes.products import products_bp
 from routes.recipes import recipes_bp
-
+from routes.clients import clients_bp
 import os
 # --- NUEVAS LÍNEAS PARA LEER EL .ENV ---
 from dotenv import load_dotenv
@@ -43,6 +44,7 @@ app.register_blueprint(main_bp)
 app.register_blueprint(inventory_bp, url_prefix='/api')
 app.register_blueprint(recipes_bp, url_prefix='/api')
 app.register_blueprint(products_bp, url_prefix='/api/products')
+app.register_blueprint(clients_bp, url_prefix='/api/clients')
 
 with app.app_context():
     db.create_all()

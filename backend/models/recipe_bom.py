@@ -1,4 +1,4 @@
-from . import db
+from database import db
 
 class RecipeBOM(db.Model):
     __tablename__ = 'recetas_bom'

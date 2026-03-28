@@ -1,4 +1,4 @@
-from . import db
+from database import db
 
 class SupplyCategory(db.Model):
     __tablename__ = 'categorias_insumos'

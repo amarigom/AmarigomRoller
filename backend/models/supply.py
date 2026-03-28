@@ -1,4 +1,4 @@
-from . import db
+from database import db
 
 class Supply(db.Model):
     __tablename__ = 'insumos'

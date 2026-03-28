@@ -1,4 +1,4 @@
-from models import db
+from database import db
 class Product(db.Model):
     __tablename__ = 'productos'
     __table_args__ = {'extend_existing': True}

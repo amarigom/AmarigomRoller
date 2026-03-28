@@ -1,4 +1,4 @@
-from . import db
+from database import db
 class RetazoTela(db.Model):
         __tablename__ = 'retazos_telas'
         id = db.Column(db.Integer, primary_key=True)
