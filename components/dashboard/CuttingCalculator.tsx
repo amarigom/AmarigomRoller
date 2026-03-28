@@ -99,6 +99,27 @@ export default function CuttingCalculator({
           <span>{confirmed ? "Stock Actualizado" : "Confirmar Producción"}</span>
         </button>
       </div>
+      
+      {/* BANNER DE OPTIMIZACIÓN - Solo para el vendedor */}
+      {explosion && explosion.some(item => item.metodo === "RETAZO") && (
+        <div className="mb-6 animate-in fade-in slide-in-from-top-2 duration-500">
+          <div className="bg-[#c9a961]/10 border border-[#c9a961]/40 rounded-xl p-4 flex items-center gap-4 shadow-sm">
+            <div className="bg-[#c9a961] p-2 rounded-full shadow-lg">
+              <Sparkles size={18} className="text-black" />
+            </div>
+            <div>
+              <h4 className="text-[#c9a961] font-bold text-sm tracking-tight uppercase">
+                ¡Optimización Disponible!
+              </h4>
+              <p className="text-[#f5f0e8]/80 text-xs">
+                Detectado <span className="text-[#c9a961] font-bold underline">retazo disponible</span> en el taller que cubre las medidas solicitadas: <strong>{` ${explosion.find(item => item.metodo === "RETAZO")?.medida_corte} `}</strong>.
+              </p>
+              
+            </div>
+            
+          </div>
+        </div>
+      )}
 
       {/* Columna Derecha: Desglose de Materiales */}
       <div className="bg-[#111111] border border-[#2a2520] rounded-xl p-6 flex flex-col shadow-2xl">

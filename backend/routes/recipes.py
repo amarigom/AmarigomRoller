@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from models.recipe_bom import RecipeBOM
 from models import db
+from models import RetazoTela
 
 recipes_bp = Blueprint('recipes', __name__)
 
@@ -44,8 +45,23 @@ def test_recipe(product_id):
             # --- 3. LÓGICA DE OPTIMIZACIÓN (Búsqueda de Retazos) ---
             # Solo buscamos retazos si es tela (lineal_alto o superficie)
             if item.tipo_calculo in ['lineal_alto', 'superficie']:
+                # Dentro del for item in components:
+            
+                print(f"--- DEBUG RETAZOS PARA: {nombre_visual} ---")
+                print(f"Buscando ID Insumo: {item.id_insumo}")
+                print(f"Medida Necesaria: {ancho_corte} x {alto_corte}")
+
+                # Intentamos traer TODOS los retazos disponibles de ese insumo para ver qué hay
+                todos_disponibles = RetazoTela.query.filter_by(
+                    id_insumo_base=item.id_insumo, 
+                    estado='disponible'
+                ).all()
+                
+                print(f"Retazos encontrados en DB para este ID: {len(todos_disponibles)}")
+                for r in todos_disponibles:
+                    print(f" > Retazo ID {r.id}: {r.ancho_cm}x{r.largo_cm}")
                 try:
-                    from models import RetazoTela
+                    
                     print(f"DEBUG: Buscando retazo para Insumo {item.id_insumo} (Req: {ancho_corte}x{alto_corte})")
                     
                     retazo = RetazoTela.query.filter(
@@ -59,7 +75,7 @@ def test_recipe(product_id):
                         print(f"  > ¡RETAZO ENCONTRADO! ID: {retazo.id}")
                         metodo = "RETAZO"
                         id_pieza_usada = retazo.id
-                        mensaje_opt = f"Usar retazo de {int(retazo.ancho_cm)}x{int(retazo.largo_cm)} cm"
+                        mensaje_opt = (f"Usar retazo de {int(retazo.ancho_cm)}x{int(retazo.largo_cm)} cm")
                         consumo_final = 1.0 # En el frontend se muestra como 1 unidad de descarte
                     else:
                         print(f"  > No hay retazos suficientes. Usando ROLLO.")
