@@ -1,6 +1,6 @@
 import re
 import os
-from flask import Flask
+from flask import Flask,request
 from flask_cors import CORS
 from models import db
 # Asegurate de que estas importaciones coincidan con tus nombres de archivos
