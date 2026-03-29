@@ -31,7 +31,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "amarigom-secret-2026")
 
 
-# --- CONFIGURACIÓN DE CORS (EL PORTERO) ---
+# --- CONFIGURACIÓN DE CORS  ---
 CORS(app, resources={
     r"/api/*": {
         "origins": ["http://localhost:3000",re.compile(r"https://.*\.vercel\.app$")],
@@ -46,7 +46,7 @@ CORS(app, resources={
 db.init_app(app)
 
 # --- REGISTRO DE BLUEPRINTS ---
-# IMPORTANTE: Cambiamos el prefix de clientes para que no choque con la barra final
+
 app.register_blueprint(main_bp)
 app.register_blueprint(inventory_bp, url_prefix='/api')
 app.register_blueprint(recipes_bp, url_prefix='/api')
@@ -59,4 +59,4 @@ with app.app_context():
 
 if __name__ == '__main__':
     # Usamos 127.0.0.1 para que coincida con tu prueba de PowerShell
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    app.run()
