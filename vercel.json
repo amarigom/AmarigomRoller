@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://amarigom-roller.vercel.app/api/:path*"
+    }
+  ]
+}

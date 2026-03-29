@@ -33,8 +33,8 @@ export default function InventarioPage() {
     setLoading(true)
     try {
       const [resInv, resCats] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/inventory`),
-        fetch(`${API_BASE_URL}/api/categories`)
+        fetch(`/api/inventory`),
+        fetch(`/api/categories`)
       ]);
       const dataInv = await resInv.json()
       const dataCats = await resCats.json()
