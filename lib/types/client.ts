@@ -1,9 +1,12 @@
 // types/client.ts
 export interface Cliente {
-  id: number;
+   id: number;
   nombre: string;
-  telefono: string;
+  apellido: string; // <--- AGREGÁ ESTA LÍNEA SI NO ESTÁ
+  email: string;
+  telefono?: string;
   direccion?: string;
-  email?: string;
-  // Podés agregar otros campos que ya tengas en tu tabla de Neon
+  notas?: string;
+  fecha_registro?: string;
+  
 }

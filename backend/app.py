@@ -1,3 +1,4 @@
+import re
 import os
 from flask import Flask
 from flask_cors import CORS
@@ -33,7 +34,7 @@ app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "amarigom-secret-2026")
 # --- CONFIGURACIÓN DE CORS (EL PORTERO) ---
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000","https://amarigom-roller-frontend1-d9ivesnu3-andreas-projects-71d69b69.vercel.app"],
+        "origins": ["http://localhost:3000",re.compile(r"https://.*\.vercel\.app$")],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept"],
         "supports_credentials": True,
