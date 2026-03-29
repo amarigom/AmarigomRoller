@@ -34,7 +34,7 @@ app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "amarigom-secret-2026")
 # --- CONFIGURACIÓN DE CORS  ---
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:3000",re.compile(r"https://.*\.vercel\.app$")],
+        "origins": ["http://localhost:3000",re.compile(r"https://.*\.vercel\.app.*$")],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept"],
         "supports_credentials": True,
