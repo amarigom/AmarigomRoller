@@ -9,3 +9,7 @@ print(f"🚀 Conectando a: {url.split('@')[1]}") # Solo mostramos el host por se
 
 # Intenta un select simple
 # Si no tira error, estás adentro de la base de desarrollo
+# Intenta un select simple
+# Si no tira error, estás adentro de la base de desarrollo
+# Intenta un select simple
+# Si no tira error, estás adentro de la base de desarrollo
