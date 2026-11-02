@@ -32,3 +32,12 @@ class ScrapRepository(BaseRepository):
         for r in rows:
             agrupados.setdefault(r.id_insumo_base, []).append(r)
         return agrupados
+
+    def lock_available(self, scrap_ids):
+        """Retazos aún disponibles, bloqueados hasta el commit."""
+        if not scrap_ids:
+            return {}
+        rows = RetazoTela.query.filter(
+            RetazoTela.id.in_(scrap_ids), RetazoTela.estado == 'disponible'
+        ).with_for_update().all()
+        return {r.id: r for r in rows}

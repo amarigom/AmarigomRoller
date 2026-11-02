@@ -3,7 +3,7 @@
 import { useState } from "react" // Agregamos estado local para el móvil
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Package, Users, Calculator, ClipboardList, ChevronLeft, ChevronRight, Menu, X, LogOut } from "lucide-react"
+import { Package, Users, Calculator, ClipboardList, ChevronLeft, ChevronRight, Menu, X, LogOut, UserCog } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { hasPermission, logout, type Session } from "@/lib/api"
 
@@ -23,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/gestion/clientes", label: "Clientes", icon: Users, permission: "clients:read" },
   { href: "/gestion/calculadora", label: "Calculadora de Corte", icon: Calculator, permission: "recipes:read" },
   { href: "/gestion/ordenes", label: "Ordenes", icon: ClipboardList, permission: "inventory:read" },
+  { href: "/gestion/usuarios", label: "Usuarios", icon: UserCog, permission: "users:manage" },
 ]
 
 export default function Sidebar({ collapsed, onToggleCollapse, stats, session }: SidebarProps) {

@@ -18,6 +18,13 @@ class SupplyRepository(BaseRepository):
             .first()
         )
 
+    def lock_many(self, supply_ids):
+        """Trae los insumos bloqueándolos hasta el commit (evita descuentos simultáneos pisados)."""
+        if not supply_ids:
+            return {}
+        rows = Supply.query.filter(Supply.id.in_(supply_ids)).with_for_update().all()
+        return {s.id: s for s in rows}
+
     def category_exists(self, category_id):
         return self.session.get(SupplyCategory, category_id) is not None
 

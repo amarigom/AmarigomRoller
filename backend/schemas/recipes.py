@@ -29,6 +29,21 @@ class ExplosionOut(BaseModel):
     total_materiales: float
 
 
+class StockDescontadoOut(BaseModel):
+    id_insumo: int
+    insumo: str
+    cantidad: float
+    stock_restante: float
+    unidad: Optional[str]
+
+
+class ProduccionOut(BaseModel):
+    status: str = "success"
+    descontado: list[StockDescontadoOut]
+    retazos_usados: list[int]
+    total_materiales: float
+
+
 class RecipeItemOut(BaseModel):
     id: int
     componente: str

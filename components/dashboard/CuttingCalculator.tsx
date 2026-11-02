@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Calculator, Scissors, Check, Loader2, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { apiFetch } from "@/lib/api"
+import { apiFetch, getSession, hasPermission } from "@/lib/api"
 import type { RecipeComponent, RecipeItem } from "@/lib/types/recipe"
 
 interface CuttingCalculatorProps {
@@ -24,6 +24,40 @@ export default function CuttingCalculator({
   const [explosion, setExplosion] = useState<RecipeComponent[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  const [producing, setProducing] = useState(false)
+  const [produceError, setProduceError] = useState<string | null>(null)
+  const canProduce = hasPermission(getSession(), "recipes:produce")
+
+  // Al cambiar medidas o producto hay que volver a confirmar
+  useEffect(() => {
+    setConfirmed(false)
+    setProduceError(null)
+  }, [windowWidth, windowHeight, selectedProductId])
+
+  const confirmarProduccion = async () => {
+    if (!explosion || !selectedProductId) return
+    if (!window.confirm("Se descontará el stock y se marcarán los retazos usados. ¿Confirmar producción?")) return
+    setProducing(true)
+    setProduceError(null)
+    try {
+      const response = await apiFetch(`/api/recipes/${selectedProductId}/produce`, {
+        method: "POST",
+        body: JSON.stringify({ w: Number(windowWidth), h: Number(windowHeight) }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        const detalle = Array.isArray(data.detalles) && data.detalles.length ? ` (${data.detalles.join("; ")})` : ""
+        setProduceError((data.message || "No se pudo confirmar la producción") + detalle)
+        return
+      }
+      setConfirmed(true)
+      onRefreshInventory()
+    } catch {
+      setProduceError("Error de red al confirmar la producción")
+    } finally {
+      setProducing(false)
+    }
+  }
 
   // Acción: Calcular explosión basada únicamente en medidas e ID
   const calcularReceta = async () => {
@@ -88,14 +122,20 @@ export default function CuttingCalculator({
           </div>
         </div>
 
+        {produceError && <p className="text-sm text-red-400">{produceError}</p>}
+        {!canProduce && (
+          <p className="text-xs text-[#6b6560]">Tu rol no puede confirmar producciones.</p>
+        )}
+
         <button
-          disabled={!explosion || loading || confirmed}
+          onClick={confirmarProduccion}
+          disabled={!explosion || loading || producing || confirmed || !canProduce}
           className={cn(
             "w-full py-4 rounded-xl font-bold transition-all flex justify-center items-center gap-2 mt-auto shadow-lg",
             confirmed ? "bg-green-600 text-white" : "bg-[#c9a961] text-black hover:bg-[#d4b574] disabled:opacity-20"
           )}
         >
-          {loading ? <Loader2 className="animate-spin" size={20} /> : confirmed ? <Check size={20} /> : <Scissors size={20} />}
+          {loading || producing ? <Loader2 className="animate-spin" size={20} /> : confirmed ? <Check size={20} /> : <Scissors size={20} />}
           <span>{confirmed ? "Stock Actualizado" : "Confirmar Producción"}</span>
         </button>
       </div>

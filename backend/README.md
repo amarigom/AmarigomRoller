@@ -24,6 +24,7 @@ Definidos en `security/permissions.py`. Los endpoints piden un permiso, no un ro
 |---|:-:|:-:|:-:|
 | inventory:read / recipes:read | ✔ | ✔ | ✔ |
 | inventory:write | ✔ | | ✔ |
+| recipes:produce (confirmar producción: descuenta stock y usa retazos) | ✔ | | ✔ |
 | inventory:delete | ✔ | | |
 | clients:read / clients:write | ✔ | ✔ | |
 | users:manage | ✔ | | |
