@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { Calculator, Scissors, Check, Loader2, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { apiFetch } from "@/lib/api"
 import type { RecipeComponent, RecipeItem } from "@/lib/types/recipe"
 
 interface CuttingCalculatorProps {
@@ -11,7 +12,6 @@ interface CuttingCalculatorProps {
   onRefreshInventory: () => void;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
 export default function CuttingCalculator({ 
   selectedProductId, 
@@ -30,7 +30,7 @@ export default function CuttingCalculator({
     if (!windowWidth || !windowHeight || !selectedProductId) return;
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/api/test-recipe/${selectedProductId}?w=${windowWidth}&h=${windowHeight}`)
+      const response = await apiFetch(`/api/test-recipe/${selectedProductId}?w=${windowWidth}&h=${windowHeight}`)
       if (!response.ok) throw new Error();
       
       const data = await response.json()

@@ -1,41 +1,56 @@
 import os
 from datetime import timedelta
+
 from dotenv import load_dotenv
+
 load_dotenv()
+
+DEFAULT_CORS_ORIGINS = [
+    "https://amarigom-roller-frontend1.vercel.app",
+    "https://amarigom-roller.vercel.app",
+    "http://localhost:3000",
+]
+
+
+def _database_uri():
+    uri = os.environ.get('DATABASE_URL')
+    if uri and uri.startswith("postgres://"):
+        uri = uri.replace("postgres://", "postgresql://", 1)
+    return uri
+
+
+def _cors_origins():
+    raw = os.environ.get('CORS_ORIGINS')
+    if not raw:
+        return DEFAULT_CORS_ORIGINS
+    return [o.strip() for o in raw.split(',') if o.strip()]
+
+
 class Config:
-    """Configuración de la aplicación Flask"""
-    
-    # Clave secreta para sesiones (cambiar en producción)
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    
-    # Configuración de Flask-Mail para envío de cotizaciones
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', 'True') == 'True'
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or MAIL_USERNAME
-        
-    # Configuración de sesión
+    """Configuración de la aplicación Flask (se lee del entorno)."""
+
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SQLALCHEMY_DATABASE_URI = _database_uri()
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    CORS_ORIGINS = _cors_origins()
+
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-    
-    # Configuración de uploads (para subir imágenes)
-    UPLOAD_FOLDER = 'static/images/uploads'
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max
-    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-    
+    MAX_CONTENT_LENGTH = 16 * 1024 * 1024
+
+    # Autenticación
+    JWT_EXPIRES_MINUTES = int(os.environ.get('JWT_EXPIRES_MINUTES', 480))
+    LOGIN_MAX_ATTEMPTS = int(os.environ.get('LOGIN_MAX_ATTEMPTS', 5))
+    LOGIN_LOCK_MINUTES = int(os.environ.get('LOGIN_LOCK_MINUTES', 15))
+
+    # Notificaciones (cotizaciones). Sin RESEND_API_KEY solo se registran en el log.
+    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'onboarding@resend.dev')
+    QUOTE_RECIPIENT = os.environ.get('QUOTE_RECIPIENT') or os.environ.get('MAIL_USERNAME')
+
     # Información de contacto
     CONTACT_EMAIL = os.environ.get('CONTACT_EMAIL') or 'contacto@amarigom.com'
     WHATSAPP_NUMBER = os.environ.get('WHATSAPP_NUMBER') or '+5492494630750'
     INSTAGRAM_URL = os.environ.get('INSTAGRAM_URL') or 'https://instagram.com/amarigom'
 
-
-    
-    # PostgreSQL:
-    uri = os.environ.get('DATABASE_URL')
-    if uri and uri.startswith("postgres://"):
-        uri = uri.replace("postgres://", "postgresql://", 1)
-        
-    SQLALCHEMY_DATABASE_URI = uri
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    MAIL_ENABLED = os.environ.get('MAIL_ENABLED') == 'True'
+    # Base nueva: AUTO_CREATE_TABLES=1 una sola vez y luego `flask db upgrade`
+    AUTO_CREATE_TABLES = os.environ.get('AUTO_CREATE_TABLES') == '1'

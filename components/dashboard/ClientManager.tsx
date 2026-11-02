@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Phone } from "lucide-react";
 import { Cliente } from '@/lib/types/client';
+import { apiFetch } from "@/lib/api";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
 
 export default function ClientesPage() {
@@ -15,7 +16,7 @@ export default function ClientesPage() {
 
   // 1. RESPONSABILIDAD: Cargar datos (Fetch)
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/clients`)
+    apiFetch(`/api/clients`)
       .then(res => res.json())
       .then(data => setClientes(data))
       .catch(err => console.error("Error cargando clientes:", err));

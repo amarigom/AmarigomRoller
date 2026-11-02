@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import { Plus, X, Loader2 } from "lucide-react"
 import InventoryView from "@/components/dashboard/InventoryView"
 import { Supply } from "@/lib/types/dashboards"
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+import { apiFetch } from "@/lib/api"
 
 interface Categoria {
   id: number;
@@ -33,8 +32,8 @@ export default function InventarioPage() {
     setLoading(true)
     try {
       const [resInv, resCats] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/inventory`),
-        fetch(`${API_BASE_URL}/api/categories`)
+        apiFetch(`/api/inventory`),
+        apiFetch(`/api/categories`)
       ]);
       const dataInv = await resInv.json()
       const dataCats = await resCats.json()
@@ -86,7 +85,7 @@ export default function InventarioPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/inventory`, {
+      const response = await apiFetch(`/api/inventory`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

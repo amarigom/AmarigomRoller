@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import InventoryView from "../InventoryView" 
 // Asegurate que la ruta a tus tipos sea la correcta
 import type { Supply } from "@/lib/types/dashboards"
+import { apiFetch } from "@/lib/api"
 
 const mapBackendToFrontend = (backendSupply: any): Supply => {
   return {
@@ -33,7 +34,7 @@ export default function InventoryPage() {
     const fetchInventory = async () => {
       try {
         
-        const response = await fetch("https://amarigom-roller.vercel.app/api/inventory")
+        const response = await apiFetch("/api/inventory")
         
         if (!response.ok) throw new Error(`Error: ${response.statusText}`)
         

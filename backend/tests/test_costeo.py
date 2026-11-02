@@ -4,7 +4,8 @@ from types import SimpleNamespace as NS
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from services.costeo import calcular_explosion, cm_a_unidad, buscar_retazo
+from services.costeo import calcular_explosion
+from strategies.costing import buscar_retazo
 
 
 def insumo(unidad='metro', precio=15000, name='Blackout'):
@@ -18,12 +19,6 @@ def componente(tipo, ins, id_insumo=1, dw=0, dh=0, base=1):
 
 def retazo(id_, ancho, largo):
     return NS(id=id_, ancho_cm=ancho, largo_cm=largo)
-
-
-def test_conversion_unidades():
-    assert cm_a_unidad(200, 100, 'metro', 'lineal_alto') == 2.0
-    assert cm_a_unidad(200, 100, 'cm', 'lineal_alto') == 200
-    assert cm_a_unidad(200, 100, 'm2', 'superficie') == 2.0
 
 
 def test_tela_en_rollo_cuesta_por_metro():

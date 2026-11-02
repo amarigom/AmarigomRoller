@@ -5,8 +5,7 @@ import CuttingCalculator from "@/components/dashboard/CuttingCalculator"
 import type { Product } from "@/lib/types/product"
 import type { RecipeItem } from "@/lib/types/recipe"
 import { mapBackendToRecipe } from "@/lib/mappers" 
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000';
+import { apiFetch } from "@/lib/api"
 
 export default function CalculadoraPage() {
   const [productList, setProductList] = useState<Product[]>([])
@@ -19,7 +18,7 @@ export default function CalculadoraPage() {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/products`);
+        const res = await apiFetch(`/api/products`);
         if (!res.ok) throw new Error("Error al cargar productos");
         const data = await res.json();
         setProductList(data);
@@ -41,7 +40,7 @@ export default function CalculadoraPage() {
     if (!id) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/recipes/${id}`);
+      const res = await apiFetch(`/api/recipes/${id}`);
       const data = await res.json();
 
       if (!res.ok) {
