@@ -25,7 +25,10 @@ if uri.startswith("postgres://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "amarigom-secret-2026")
+secret_key = os.environ.get("SECRET_KEY")
+if not secret_key:
+    raise ValueError("ERROR CRÍTICO: La variable SECRET_KEY no está configurada.")
+app.config['SECRET_KEY'] = secret_key
 
 # --- CONFIGURACIÓN DE CORS ---
 CORS(app, resources={
@@ -40,16 +43,6 @@ CORS(app, resources={
         "supports_credentials": True
     }
 })
-
-@app.after_request
-def add_cors_headers(response):
-    origin = request.headers.get('Origin')
-    if origin and (".vercel.app" in origin or "localhost" in origin):
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-    return response
 
 # --- INICIALIZACIÓN ---
 db.init_app(app)

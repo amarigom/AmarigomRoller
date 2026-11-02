@@ -5,6 +5,20 @@ from models import RetazoTela
 
 recipes_bp = Blueprint('recipes', __name__)
 
+UNIDADES_METRO = {'metro', 'metros', 'm', 'mt', 'mts', 'ml'}
+UNIDADES_M2 = {'m2', 'm²'}
+
+
+def _cm_a_unidad(cm_lineales, ancho_cm, unidad, tipo_calculo):
+    """Convierte el consumo en cm a la unidad en que esta cargado el precio del insumo."""
+    if unidad in UNIDADES_METRO:
+        return cm_lineales / 100.0
+    if unidad in UNIDADES_M2 and tipo_calculo == 'superficie':
+        return (ancho_cm * cm_lineales) / 10000.0
+    if unidad in UNIDADES_M2:
+        return cm_lineales / 100.0
+    return cm_lineales
+
 @recipes_bp.route('/test-recipe/<int:product_id>', methods=['GET'])
 def test_recipe(product_id):
     resultado = [] 
@@ -95,15 +109,26 @@ def test_recipe(product_id):
                 consumo_final = float(item.cantidad_base or 1.0)
 
             # --- 5. COSTEO FINAL ---
-            # Si es lineal (alto/ancho), trabajamos en cm para multiplicar por el precio unitario
+            # El precio esta expresado en la unidad del insumo (metro, cm, m2, unidad):
+            # se convierte el consumo a esa unidad antes de multiplicar.
+            unidad = (getattr(insumo_obj, 'unidad_medida', None) or 'metro').strip().lower()
             if item.tipo_calculo in ['lineal_alto', 'lineal_ancho', 'superficie']:
-                costo_parcial = round((alto_corte if item.tipo_calculo != 'lineal_ancho' else ancho_corte) * precio_unit_base, 2)
+                cm_lineales = ancho_corte if item.tipo_calculo == 'lineal_ancho' else alto_corte
+                consumo_unidad = _cm_a_unidad(cm_lineales, ancho_corte, unidad, item.tipo_calculo)
             else:
-                costo_parcial = round(consumo_final * precio_unit_base, 2)
+                consumo_unidad = consumo_final
+
+            # Un retazo ya fue pagado como parte del rollo original: no suma costo
+            if metodo == "RETAZO":
+                costo_parcial = 0.0
+            else:
+                costo_parcial = round(consumo_unidad * precio_unit_base, 2)
 
             # --- 6. MAPEO PARA CUTTINGCALCULATOR.TSX ---
             resultado.append({
                 "componente": nombre_visual,
+                "consumo_m_o_m2": round(consumo_unidad, 4),
+                "unidad": unidad,
                 "consumo_cm": round(consumo_final, 2),
                 "medida_corte": f"{ancho_corte} x {alto_corte} cm",
                 "precio_unitario": precio_unit_base,

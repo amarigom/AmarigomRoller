@@ -22,6 +22,7 @@ export interface RecipeItem {
 export interface RecipeComponent {
   componente: string;      // Ej: "Tela Blackout"
   consumo_m_o_m2: number;  // Ej: 2.45
+  unidad?: string;         // Unidad del insumo: metro, m2, unidad
   medida_corte: string;    // Ej: "155 x 210"
   precio_unitario: number;
   costo_parcial: number;

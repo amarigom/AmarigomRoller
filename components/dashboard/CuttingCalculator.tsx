@@ -137,7 +137,7 @@ export default function CuttingCalculator({
                   <p className="text-[10px] text-[#6b6560] uppercase tracking-wider">Corte: {item.medida_corte}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[#c9a961] font-mono text-sm">{item.consumo_m_o_m2}</p>
+                  <p className="text-[#c9a961] font-mono text-sm">{item.consumo_m_o_m2} {item.unidad}</p>
                   <p className="text-[10px] text-[#6b6560] font-bold">${item.costo_parcial.toFixed(2)}</p>
                 </div>
               </div>
