@@ -1,62 +1,66 @@
+import logging
+
 from flask import Blueprint, jsonify, request
-from models import db, Cliente 
+from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 
-# Creamos el Blueprint normal
+from models import db, Cliente
+from schemas import ClienteIn
+
 clients_bp = Blueprint('clients', __name__)
+logger = logging.getLogger(__name__)
 
-# --- GET: OBTENER CLIENTES ---
-@clients_bp.route('/', methods=['GET', 'OPTIONS'], strict_slashes=False)
+MAX_PAGE_SIZE = 500
+
+
+# --- GET: OBTENER CLIENTES (con paginación opcional: ?limit=50&offset=0) ---
+@clients_bp.route('/', methods=['GET'], strict_slashes=False)
 def get_clients():
-    if request.method == 'OPTIONS':
-        return '', 204
-    
-    clientes = Cliente.query.all()
-    return jsonify([c.to_dict() for c in clientes]), 200
+    try:
+        query = Cliente.query.order_by(Cliente.id)
+        limit = request.args.get('limit', type=int)
+        if limit is not None:
+            offset = max(request.args.get('offset', default=0, type=int), 0)
+            query = query.limit(min(max(limit, 1), MAX_PAGE_SIZE)).offset(offset)
+        return jsonify([c.to_dict() for c in query.all()]), 200
+    except Exception:
+        logger.exception("Error al obtener clientes")
+        return jsonify({"status": "error", "message": "Error al obtener clientes"}), 500
+
 
 # --- POST: CREAR CLIENTE ---
-@clients_bp.route('/', methods=['POST', 'OPTIONS'], strict_slashes=False)
+@clients_bp.route('/', methods=['POST'], strict_slashes=False)
 def create_client():
-    # 1. Manejo del Preflight (La pregunta de seguridad del navegador)
-    if request.method == 'OPTIONS':
-        return '', 204
-
-    data = request.json
-    
-    # 2. Validación: Agregamos el email como obligatorio ya que Neon lo pide
-    if not data or not data.get('nombre') or not data.get('apellido') or not data.get('email'):
-        return jsonify({
-            "status": "error", 
-            "message": "Faltan datos obligatorios (Nombre, Apellido y Email)"
-        }), 400
-    
     try:
-        # 3. Creamos la instancia para Neon
+        datos = ClienteIn.model_validate(request.get_json(silent=True) or {})
+    except ValidationError:
+        return jsonify({
+            "status": "error",
+            "message": "Faltan datos obligatorios o son inválidos (Nombre, Apellido y Email)"
+        }), 400
+
+    try:
         nuevo_cliente = Cliente(
-            nombre=data.get('nombre').strip(),
-            apellido=data.get('apellido').strip(),
-            telefono=data.get('telefono'),
-            email=data.get('email').strip(),
-            direccion=data.get('direccion'),
-            notas=data.get('notas')
+            nombre=datos.nombre.strip(),
+            apellido=datos.apellido.strip(),
+            telefono=datos.telefono,
+            email=datos.email.strip(),
+            direccion=datos.direccion,
+            notas=datos.notas
         )
-        
         db.session.add(nuevo_cliente)
         db.session.commit()
-        
+
         return jsonify({
-            "status": "success", 
+            "status": "success",
             "message": "Cliente guardado con éxito",
             "client": nuevo_cliente.to_dict()
         }), 201
-        
-    except Exception as e:
+
+    except IntegrityError:
         db.session.rollback()
-        # Si el error es por email duplicado, mandamos un mensaje claro
-        error_str = str(e)
-        if "unique constraint" in error_str.lower():
-            return jsonify({
-                "status": "error", 
-                "message": "Este email ya está registrado"
-            }), 409
-            
-        return jsonify({"status": "error", "message": error_str}), 500
+        return jsonify({"status": "error", "message": "Este email ya está registrado"}), 409
+    except Exception:
+        db.session.rollback()
+        logger.exception("Error al crear cliente")
+        return jsonify({"status": "error", "message": "No se pudo guardar el cliente"}), 500

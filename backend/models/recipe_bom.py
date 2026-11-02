@@ -2,7 +2,10 @@ from database import db
 
 class RecipeBOM(db.Model):
     __tablename__ = 'recetas_bom'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        db.Index('ix_recetas_bom_id_padre', 'id_padre'),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     id_padre = db.Column(db.Integer, db.ForeignKey('recetas_bom.id'), nullable=True)

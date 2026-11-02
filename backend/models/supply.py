@@ -2,7 +2,10 @@ from database import db
 
 class Supply(db.Model):
     __tablename__ = 'insumos'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        db.Index('ix_insumos_categoria_id', 'categoria_id'),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categorias_insumos.id'), nullable=False)

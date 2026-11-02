@@ -1,6 +1,9 @@
 from database import db
 class RetazoTela(db.Model):
         __tablename__ = 'retazos_telas'
+        __table_args__ = (
+            db.Index('ix_retazos_telas_insumo_estado', 'id_insumo_base', 'estado'),
+        )
         id = db.Column(db.Integer, primary_key=True)
         id_insumo_base = db.Column(db.Integer, db.ForeignKey('insumos.id'), nullable=False)
         ancho_cm = db.Column(db.Numeric(10, 2), nullable=False)

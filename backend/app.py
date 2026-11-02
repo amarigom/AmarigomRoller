@@ -2,6 +2,7 @@ import re
 import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_migrate import Migrate
 from models import db
 from routes.main import main_bp
 from routes.inventory import inventory_bp
@@ -46,6 +47,7 @@ CORS(app, resources={
 
 # --- INICIALIZACIÓN ---
 db.init_app(app)
+Migrate(app, db)
 
 # --- REGISTRO DE BLUEPRINTS ---
 # Aseguramos que todas las rutas de negocio cuelguen de /api
@@ -55,8 +57,11 @@ app.register_blueprint(recipes_bp, url_prefix='/api')
 app.register_blueprint(products_bp, url_prefix='/api/products')
 app.register_blueprint(clients_bp, url_prefix='/api/clients')
 
-with app.app_context():
-    db.create_all()
+# En una base nueva: AUTO_CREATE_TABLES=1 una sola vez y luego `flask db upgrade`.
+# En produccion el esquema se versiona con migraciones (carpeta migrations/).
+if os.environ.get("AUTO_CREATE_TABLES") == "1":
+    with app.app_context():
+        db.create_all()
 
 if __name__ == '__main__':
     app.run()
