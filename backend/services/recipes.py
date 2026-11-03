@@ -61,10 +61,15 @@ class RecipeService:
     def _calcular_items(self, componentes, w, h, opciones=None):
         ids_insumo = {c.id_insumo for c in componentes if c.id_insumo}
         ids_perfil = {c.id_insumo for c in componentes if c.id_insumo and usa_perfiles(c.tipo_calculo)}
+        ids_alt = {
+            i for c in componentes if usa_perfiles(c.tipo_calculo) for i in (c.insumos_alternativos or [])
+        }
+        alternativos = {s.id: s for s in self.supplies.get_many(ids_alt)} if ids_alt else {}
         retazos = self.scraps.available_by_supply(ids_insumo)
-        sobrantes = self.pieces.remnants_by_supply(ids_perfil)
+        sobrantes = self.pieces.remnants_by_supply(ids_perfil | ids_alt)
         return calcular_explosion(
             componentes, retazos, w, h, sobrantes_perfil=sobrantes, opciones=opciones,
+            insumos_alternativos=alternativos,
             min_retazo_cm=current_app.config.get('MIN_RETAZO_PERFIL_CM', MIN_RETAZO_PERFIL_CM),
         )
 
@@ -128,7 +133,8 @@ class RecipeService:
         return self._explosion_out(None, resultado, total)
 
     def _items_transitorios(self, items):
-        insumos = {s.id: s for s in self.supplies.get_many({i.id_insumo for i in items if i.id_insumo})}
+        ids = {i.id_insumo for i in items if i.id_insumo}
+        insumos = {s.id: s for s in self.supplies.get_many(ids)}
         # Objetos simples: así no se agregan a la sesión de la base
         return [
             SimpleNamespace(insumo=insumos.get(i.id_insumo), **i.model_dump())
@@ -208,12 +214,21 @@ class RecipeService:
     def _validar_items(self, items):
         errores = []
         ids = {i.id_insumo for i in items if i.id_insumo}
+        ids |= {a for i in items for a in i.insumos_alternativos}
         insumos = {s.id: s for s in self.supplies.get_many(ids)}
         for n, item in enumerate(items, start=1):
             pref = f"Ítem {n} ({item.nombre})"
             if item.tipo_calculo not in STRATEGIES:
                 errores.append(f"{pref}: tipo de cálculo '{item.tipo_calculo}' inexistente (válidos: {', '.join(sorted(STRATEGIES))})")
                 continue
+            if item.insumos_alternativos and item.tipo_calculo != 'perfil':
+                errores.append(f"{pref}: solo los componentes de tipo 'perfil' admiten perfiles alternativos")
+            for alt in item.insumos_alternativos:
+                alternativo = insumos.get(alt)
+                if alternativo is None:
+                    errores.append(f"{pref}: el perfil alternativo {alt} no existe")
+                elif not alternativo.largo_pieza_cm:
+                    errores.append(f"{pref}: el perfil alternativo '{alternativo.name}' no tiene largo de pieza cargado")
             if item.tipo_calculo != 'mano_obra' and not item.id_insumo:
                 errores.append(f"{pref}: falta el insumo")
             insumo = insumos.get(item.id_insumo) if item.id_insumo else None

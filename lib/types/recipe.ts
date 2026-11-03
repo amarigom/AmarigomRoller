@@ -55,6 +55,7 @@ export interface RecipeItemDraft {
   formula_alto: string | null;
   formula_cantidad: string | null;
   condicion: string | null;
+  insumos_alternativos: number[];
 }
 
 export interface RecipeProductSummary {

@@ -21,18 +21,42 @@ def _evaluar(item, texto, contexto, numerico):
         raise UnprocessableError(f"{nombre}: {exc} (fórmula '{texto}')")
 
 
+def _elegir_perfil(item, corte, extras):
+    """Perfil que cubre el corte: el de la receta si alcanza; si no, la alternativa más corta que alcance."""
+    nombre = getattr(item, 'nombre', None) or getattr(item, 'nombre_producto', None) or 'componente'
+    candidatos = [(item.id_insumo, item.insumo)]
+    candidatos += [(i, extras[i]) for i in (getattr(item, 'insumos_alternativos', None) or []) if i in extras]
+    con_largo = [(i, s) for i, s in candidatos if s is not None and getattr(s, 'largo_pieza_cm', None)]
+    if not con_largo:
+        return item.id_insumo, item.insumo
+    largo = lambda par: float(par[1].largo_pieza_cm)
+    principal = con_largo[0]
+    if candidatos[0] == principal and largo(principal) + 1e-9 >= corte:
+        return principal
+    alcanzan = sorted((p for p in con_largo if largo(p) + 1e-9 >= corte), key=lambda p: (largo(p), p[0]))
+    if not alcanzan:
+        raise UnprocessableError(
+            f"{nombre}: el corte de {corte:g} cm no entra en ningún perfil disponible "
+            f"(el más largo mide {max(largo(p) for p in con_largo):g} cm). "
+            "Agregá un perfil más largo como alternativa en la receta.")
+    return alcanzan[0]
+
+
 def calcular_explosion(componentes, retazos_por_insumo, w_pedido, h_pedido,
-                       sobrantes_perfil=None, min_retazo_cm=MIN_RETAZO_PERFIL_CM, opciones=None):
+                       sobrantes_perfil=None, min_retazo_cm=MIN_RETAZO_PERFIL_CM, opciones=None,
+                       insumos_alternativos=None):
     """
     componentes: ítems de receta con su insumo ya cargado.
     retazos_por_insumo: {id_insumo: [retazos de tela disponibles]}.
     sobrantes_perfil: {id_insumo: [piezas sobrantes de perfil]} con `id` y `longitud_actual_cm`.
     opciones: variantes del pedido (sistema, color...) que usan las condiciones y fórmulas.
+    insumos_alternativos: {id: insumo} de los perfiles alternativos que pueden reemplazar al de la receta.
     Devuelve (lista de componentes calculados, total de materiales). Los ítems cuya
     condición da falso no aparecen en el resultado.
     """
     resultado = []
     retazos_usados = set()
+    extras = insumos_alternativos or {}
     contexto = _contexto(w_pedido, h_pedido, opciones)
     pool_perfiles = {
         id_insumo: [
@@ -47,17 +71,7 @@ def calcular_explosion(componentes, retazos_por_insumo, w_pedido, h_pedido,
         if condicion and not _evaluar(item, condicion, contexto, numerico=False):
             continue
 
-        insumo = item.insumo
         strategy = get_strategy(item.tipo_calculo)
-
-        retazos = []
-        if usa_retazos(item.tipo_calculo):
-            retazos = [
-                r for r in retazos_por_insumo.get(item.id_insumo, [])
-                if r.id not in retazos_usados
-            ]
-        elif usa_perfiles(item.tipo_calculo):
-            retazos = pool_perfiles.setdefault(item.id_insumo, [])
 
         ancho = w_pedido + float(item.delta_ancho_cm or 0)
         alto = h_pedido + float(item.delta_alto_cm or 0)
@@ -68,6 +82,17 @@ def calcular_explosion(componentes, retazos_por_insumo, w_pedido, h_pedido,
             alto = _evaluar(item, item.formula_alto, contexto, numerico=True)
         if getattr(item, 'formula_cantidad', None):
             cantidad = _evaluar(item, item.formula_cantidad, contexto, numerico=True)
+
+        id_insumo, insumo = item.id_insumo, item.insumo
+        retazos = []
+        if usa_retazos(item.tipo_calculo):
+            retazos = [
+                r for r in retazos_por_insumo.get(id_insumo, [])
+                if r.id not in retazos_usados
+            ]
+        elif usa_perfiles(item.tipo_calculo):
+            id_insumo, insumo = _elegir_perfil(item, round(ancho, 2), extras)
+            retazos = pool_perfiles.setdefault(id_insumo, [])
 
         largo_pieza = getattr(insumo, 'largo_pieza_cm', None) if insumo else None
         calculo = strategy.calculate(ComponentInput(
@@ -87,7 +112,7 @@ def calcular_explosion(componentes, retazos_por_insumo, w_pedido, h_pedido,
         if calculo.id_retazo is not None:
             retazos_usados.add(calculo.id_retazo)
         fila = asdict(calculo)
-        fila['id_insumo'] = item.id_insumo
+        fila['id_insumo'] = id_insumo
         resultado.append(fila)
 
     total = round(sum(i['costo_parcial'] for i in resultado), 2)

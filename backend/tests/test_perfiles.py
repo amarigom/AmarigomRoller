@@ -97,10 +97,34 @@ def test_perfil_varios_cortes_por_componente():
     assert origenes == ['pieza_nueva', 'retazo']
 
 
-def test_perfil_mas_largo_que_la_pieza_usa_varias_piezas():
-    res, _ = calcular_explosion([componente('perfil', insumo(largo=200))], {}, 250, 200)
-    corte = res[0]['cortes'][0]
-    assert corte['largo_origen'] == 400 and corte['sobrante'] == 150
+def test_perfil_mas_largo_que_la_pieza_da_error_claro():
+    with pytest.raises(Exception) as exc:
+        calcular_explosion([componente('perfil', insumo(largo=200))], {}, 250, 200)
+    assert 'no entra' in str(exc.value) and 'alternativa' in str(exc.value)
+
+
+def test_perfil_usa_la_alternativa_mas_corta_que_alcance():
+    p2, p4, p6 = insumo(largo=200, name='x2'), insumo(largo=400, name='x4'), insumo(largo=600, name='x6')
+    item = componente('perfil', p2)
+    item.insumos_alternativos = [6, 4]
+    res, _ = calcular_explosion([item], {}, 250, 200, insumos_alternativos={6: p6, 4: p4})
+    assert res[0]['id_insumo'] == 4 and res[0]['cortes'][0]['largo_origen'] == 400
+    assert res[0]['componente'] == 'x4'
+
+
+def test_perfil_conserva_el_de_la_receta_si_alcanza():
+    item = componente('perfil', insumo(largo=400))
+    item.insumos_alternativos = [4]
+    res, _ = calcular_explosion([item], {}, 150, 200, insumos_alternativos={4: insumo(largo=200)})
+    assert res[0]['id_insumo'] == 1
+
+
+def test_perfil_sin_alternativa_que_alcance_informa_el_mayor_largo():
+    item = componente('perfil', insumo(largo=200))
+    item.insumos_alternativos = [4]
+    with pytest.raises(Exception) as exc:
+        calcular_explosion([item], {}, 450, 200, insumos_alternativos={4: insumo(largo=400)})
+    assert '400' in str(exc.value)
 
 
 def test_perfil_respeta_largos_de_2_4_y_6_metros():
@@ -176,3 +200,72 @@ def test_producir_perfil_sin_stock_no_guarda_sobrantes(client, auth):
     r = client.post("/api/recipes/1/produce", json={"w": 150, "h": 200}, headers=auth("taller"))
     assert r.status_code == 409
     assert PiezaStock.query.count() == 0
+
+
+# --- Perfiles alternativos (el corte nunca se empalma) --------------------------------------
+
+def _seed_con_alternativa():
+    cat = SupplyCategory(name="Perfiles")
+    db.session.add(cat)
+    db.session.flush()
+    corto = Supply(categoria_id=cat.id, name="Tubo 2 m", unidad_medida="cm", precio_costo_unitario=PRECIO_CM,
+                   stock_actual=1000, largo_pieza_cm=200)
+    largo = Supply(categoria_id=cat.id, name="Tubo 4 m", unidad_medida="cm", precio_costo_unitario=PRECIO_CM,
+                   stock_actual=1000, largo_pieza_cm=400)
+    db.session.add_all([corto, largo])
+    db.session.commit()
+    crear_receta(1, [{"id_insumo": corto.id, "nombre": "Tubo", "tipo_calculo": "perfil",
+                      "insumos_alternativos": [largo.id]}])
+    return corto, largo
+
+
+def test_receta_cambia_al_perfil_alternativo_cuando_el_ancho_no_entra(client, auth):
+    corto, largo = _seed_con_alternativa()
+    h = auth("ventas")
+    angosto = client.get("/api/test-recipe/1?w=150&h=200", headers=h).get_json()
+    ancho = client.get("/api/test-recipe/1?w=250&h=200", headers=h).get_json()
+    assert angosto["explosion"][0]["componente"] == "Tubo 2 m"
+    assert ancho["explosion"][0]["componente"] == "Tubo 4 m"
+    assert ancho["explosion"][0]["cortes"][0]["largo_origen"] == 400
+
+
+def test_producir_descuenta_stock_del_perfil_elegido(client, auth):
+    corto, largo = _seed_con_alternativa()
+    r = client.post("/api/recipes/1/produce", json={"w": 250, "h": 200}, headers=auth("taller"))
+    assert r.status_code == 200, r.get_json()
+    db.session.expire_all()
+    assert float(db.session.get(Supply, corto.id).stock_actual) == 1000
+    assert float(db.session.get(Supply, largo.id).stock_actual) == 1000 - 250
+    assert PiezaStock.query.one().id_insumo == largo.id
+
+
+def test_sin_alternativa_el_ancho_largo_da_422(client, auth):
+    corto, _ = _seed_con_alternativa()
+    r = client.get("/api/test-recipe/1?w=500&h=200", headers=auth("ventas"))
+    assert r.status_code == 422
+    assert "400" in r.get_json()["message"]
+
+
+def test_publicar_valida_perfiles_alternativos(client, auth):
+    corto, largo = _seed_con_alternativa()
+    h = auth("admin")
+    item = {"id_insumo": corto.id, "nombre": "Tubo", "tipo_calculo": "perfil"}
+    ok = client.post("/api/recipes/1/versions", json={"items": [{**item, "insumos_alternativos": [largo.id]}]}, headers=h)
+    assert ok.status_code == 201, ok.get_json()
+    inexistente = client.post("/api/recipes/1/versions", json={"items": [{**item, "insumos_alternativos": [999]}]}, headers=h)
+    assert inexistente.status_code == 400
+    en_fijo = client.post("/api/recipes/1/versions", json={"items": [
+        {**item, "tipo_calculo": "fijo", "insumos_alternativos": [largo.id]}]}, headers=h)
+    assert en_fijo.status_code == 400
+    detalle = client.get("/api/recipes/1/detail", headers=h).get_json()
+    assert detalle[0]["insumos_alternativos"] == [largo.id]
+
+
+def test_importar_csv_con_alternativas(client, auth):
+    corto, largo = _seed_con_alternativa()
+    csv = f"producto;nombre;id_insumo;tipo_calculo;insumos_alternativos\nRoller;Tubo;{corto.id};perfil;{largo.id}\n"
+    h = auth("admin")
+    assert client.post("/api/recipes/import", json={"csv": csv, "aplicar": True}, headers=h).status_code == 200
+    from models import Product
+    pid = Product.query.filter_by(nombre="Roller").one().id
+    assert client.get(f"/api/recipes/{pid}/detail", headers=h).get_json()[0]["insumos_alternativos"] == [largo.id]

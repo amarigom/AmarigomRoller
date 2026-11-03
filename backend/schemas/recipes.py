@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 MAX_MEDIDA_CM = 1000
 
@@ -28,6 +28,12 @@ class RecipeItemIn(BaseModel):
     formula_alto: Optional[str] = Field(None, max_length=200)
     formula_cantidad: Optional[str] = Field(None, max_length=200)
     condicion: Optional[str] = Field(None, max_length=200)
+    insumos_alternativos: list[int] = Field(default_factory=list, max_length=10)
+
+    @field_validator('insumos_alternativos', mode='before')
+    @classmethod
+    def _sin_nulos(cls, v):
+        return [] if v is None else v
 
 
 class RecipeVersionIn(BaseModel):
@@ -69,6 +75,7 @@ class RecipeItemFullOut(RecipeItemIn):
         campos = {k: getattr(i, k) for k in RecipeItemIn.model_fields}
         for k in ('delta_ancho_cm', 'delta_alto_cm', 'cantidad_base', 'merma_pct', 'minutos_mano_obra'):
             campos[k] = float(campos[k] or 0)
+        campos['insumos_alternativos'] = list(i.insumos_alternativos or [])
         return cls(id=i.id, insumo=i.insumo.name if i.insumo else None, **campos)
 
 

@@ -54,6 +54,9 @@ def parsear(texto):
         for campo, valor in datos.items():
             if valor == '':
                 continue
+            if campo == 'insumos_alternativos':
+                limpio[campo] = [x.strip() for x in valor.split('|') if x.strip()]
+                continue
             limpio[campo] = _numero(valor) if campo in NUMERICAS else valor
         try:
             productos.setdefault(producto, []).append(RecipeItemIn.model_validate(limpio))

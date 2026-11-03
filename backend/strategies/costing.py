@@ -137,10 +137,11 @@ class WidthLinearStrategy(CalculationStrategy):
 class ProfileStrategy(CalculationStrategy):
     """Perfiles y caños que se compran en piezas de largo fijo (2, 4 o 6 m) y se cortan al ancho.
 
-    Cada corte sale primero del sobrante reutilizable más corto que alcance; si no hay,
-    de una pieza nueva. Si el sobrante mide al menos `min_retazo_cm` queda como retazo para
-    próximos cortes; si no, se pierde y se cobra. `data.retazos` es el conjunto de sobrantes
-    del insumo, compartido entre componentes: la estrategia lo actualiza.
+    Cada corte sale de una sola pieza (nunca se empalma): primero del sobrante reutilizable
+    más corto que alcance; si no hay, de una pieza nueva. Si el sobrante mide al menos
+    `min_retazo_cm` queda como retazo para próximos cortes; si no, se pierde y se cobra.
+    `data.retazos` es el conjunto de sobrantes del insumo, compartido entre componentes:
+    la estrategia lo actualiza.
     """
 
     tipo = 'perfil'
@@ -152,6 +153,10 @@ class ProfileStrategy(CalculationStrategy):
             raise UnprocessableError(f"{data.nombre}: la medida de corte debe ser mayor a 0")
         if largo_pieza <= 0:
             raise UnprocessableError(f"{data.nombre}: el perfil no tiene largo_pieza_cm cargado")
+        if corte > largo_pieza + 1e-9:
+            raise UnprocessableError(
+                f"{data.nombre}: el corte de {corte:g} cm no entra en una pieza de {largo_pieza:g} cm. "
+                "Un perfil no se empalma: hay que usar uno igual o más largo que el ancho.")
 
         cantidad = max(1, math.ceil(data.cantidad_base - 1e-9))
         cortes = []
@@ -163,8 +168,7 @@ class ProfileStrategy(CalculationStrategy):
                 usado = origen['largo']
                 nuevo = False
             else:
-                piezas = math.ceil(corte / largo_pieza - 1e-9)
-                usado = piezas * largo_pieza
+                usado = largo_pieza
                 nuevo = True
             sobrante = round(usado - corte, 2)
             reutilizable = sobrante >= data.min_retazo_cm

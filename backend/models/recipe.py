@@ -47,7 +47,8 @@ class RecetaItem(db.Model):
     formula_cantidad = db.Column(db.String(200))
     # Si se carga y da falso, el componente no entra (ej: "ancho > 200", "sistema == 'motor'")
     condicion = db.Column(db.String(200))
-
+    # Perfiles que reemplazan al de la receta cuando este es más corto que el corte (ids de insumos)
+    insumos_alternativos = db.Column(db.JSON)
     insumo = db.relationship('Supply')
 
     @property

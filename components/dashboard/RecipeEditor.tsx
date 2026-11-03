@@ -26,7 +26,7 @@ const ghost = `${btn} border border-[#2a2520] text-[#c9a961] hover:border-[#c9a9
 const ITEM_VACIO: RecipeItemDraft = {
   id_insumo: null, nombre: "", tipo_calculo: "fijo", descripcion: null, delta_ancho_cm: 0, delta_alto_cm: 0,
   cantidad_base: 1, merma_pct: 0, minutos_mano_obra: 0, formula_ancho: null, formula_alto: null,
-  formula_cantidad: null, condicion: null,
+  formula_cantidad: null, condicion: null, insumos_alternativos: [],
 }
 
 async function mensaje(res: Response) {
@@ -277,6 +277,18 @@ export default function RecipeEditor() {
                       className="flex items-center justify-center text-red-400 hover:text-red-300" title="Quitar componente">
                       <Trash2 size={16} />
                     </button>
+                    {it.tipo_calculo === "perfil" && (
+                      <label className="col-span-2 text-[10px] uppercase tracking-wider text-[#6b6560] md:col-span-6">
+                        Perfiles alternativos (se usa el más corto que alcance si el de arriba es menor al ancho)
+                        <select multiple className={`${inputClass} h-24`} value={it.insumos_alternativos.map(String)}
+                          onChange={(e) => cambiar(n, "insumos_alternativos",
+                            Array.from(e.target.selectedOptions, (o) => Number(o.value)))}>
+                          {insumos.filter((s) => s.id !== it.id_insumo).map((s) => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                    )}
                     {([
                       ["formula_ancho", "Fórmula ancho (ej: ancho - 3)"], ["formula_alto", "Fórmula alto"],
                       ["formula_cantidad", "Fórmula cantidad (ej: ceil(ancho/100))"], ["condicion", "Condición (ej: ancho > 200)"],

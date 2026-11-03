@@ -27,6 +27,9 @@ Publicar una versión cierra la vigente, así los cálculos con `fecha=YYYY-MM-D
 - Evaluador propio por lista blanca de nodos (`strategies/formulas.py`); nunca usa `eval`.
   Permitido: `+ - * / // %`, comparaciones, `and/or/not`, `a if c else b`, `ceil floor round min max abs`.
 - Cada ítem tiene `merma_pct` y `minutos_mano_obra`; el tipo `perfil` calcula piezas de 2/4/6 m con reutilización de sobrantes.
+- Un corte de perfil sale siempre de una sola pieza (nunca se empalma). Si el perfil de la receta es más corto que el
+  ancho, se usa la alternativa más corta que alcance (`insumos_alternativos`; en CSV: ids separados por `|`).
+  Si ninguna alcanza, el cálculo responde 422 indicando el largo máximo disponible.
 
 ### Herramientas del equipo (admin, pantalla `/gestion/recetas`)
 
