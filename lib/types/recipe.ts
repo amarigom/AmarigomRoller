@@ -39,3 +39,42 @@ export interface ExplosionTotals {
   total_mano_obra: number;
   total: number;
 }
+
+// 3. EDICIÓN DE RECETAS (versiones publicadas por el admin)
+export interface RecipeItemDraft {
+  id_insumo: number | null;
+  nombre: string;
+  tipo_calculo: string;
+  descripcion: string | null;
+  delta_ancho_cm: number;
+  delta_alto_cm: number;
+  cantidad_base: number;
+  merma_pct: number;
+  minutos_mano_obra: number;
+  formula_ancho: string | null;
+  formula_alto: string | null;
+  formula_cantidad: string | null;
+  condicion: string | null;
+}
+
+export interface RecipeProductSummary {
+  id: number;
+  nombre: string;
+  categoria: string | null;
+  version_vigente: number | null;
+  items: number;
+}
+
+export interface RecipeVersionSummary {
+  id: number;
+  version: number;
+  vigente_desde: string;
+  vigente_hasta: string | null;
+  nota: string | null;
+  items: number;
+}
+
+export interface ImportSummary {
+  aplicado: boolean;
+  productos: { producto: string; existe: boolean; items: number; version: number }[];
+}

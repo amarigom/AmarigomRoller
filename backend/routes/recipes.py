@@ -3,9 +3,12 @@ from flask import Blueprint, jsonify, request
 import container
 from exceptions import ValidationFailed
 from schemas.common import parse_payload
-from schemas.recipes import MAX_MEDIDA_CM, MedidasIn, RecipeVersionIn
+from schemas.recipes import (
+    MAX_MEDIDA_CM, DuplicateIn, ImportIn, MedidasIn, PreviewIn, ProductIn, RecipeVersionIn,
+)
 from security.decorators import permission_required
 from security.permissions import RECIPES_PRODUCE, RECIPES_READ, RECIPES_WRITE
+from services import recipe_import
 
 recipes_bp = Blueprint('recipes', __name__)
 
@@ -90,3 +93,53 @@ def publish_version(product_id):
     datos = parse_payload(RecipeVersionIn, request.get_json(silent=True))
     version = container.recipe_service().publish_version(product_id, datos)
     return jsonify(version.model_dump(mode='json')), 201
+
+
+@recipes_bp.route('/recipes/products', methods=['GET'])
+@permission_required(RECIPES_READ)
+def list_products():
+    return jsonify([p.model_dump() for p in container.recipe_service().products()])
+
+
+@recipes_bp.route('/recipes/products', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def create_product():
+    datos = parse_payload(ProductIn, request.get_json(silent=True))
+    return jsonify(container.recipe_service().create_product(datos).model_dump()), 201
+
+
+@recipes_bp.route('/recipes/<int:product_id>/detail', methods=['GET'])
+@permission_required(RECIPES_READ)
+def recipe_detail(product_id):
+    version = request.args.get('version', type=int)
+    items = container.recipe_service().version_detail(product_id, version)
+    return jsonify([i.model_dump() for i in items])
+
+
+@recipes_bp.route('/recipes/preview', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def preview():
+    datos = parse_payload(PreviewIn, request.get_json(silent=True))
+    datos.opciones = _opciones(datos.opciones)
+    return jsonify(container.recipe_service().preview(datos).model_dump())
+
+
+@recipes_bp.route('/recipes/<int:product_id>/duplicate', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def duplicate(product_id):
+    datos = parse_payload(DuplicateIn, request.get_json(silent=True))
+    producto, version = container.recipe_service().duplicate(product_id, datos)
+    return jsonify({'producto': producto.model_dump(), 'version': version.model_dump(mode='json')}), 201
+
+
+@recipes_bp.route('/recipes/import', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def import_recipes():
+    datos = parse_payload(ImportIn, request.get_json(silent=True))
+    return jsonify(container.recipe_service().import_csv(datos))
+
+
+@recipes_bp.route('/recipes/import/template', methods=['GET'])
+@permission_required(RECIPES_READ)
+def import_template():
+    return jsonify({'csv': recipe_import.plantilla()})

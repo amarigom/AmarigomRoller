@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
-from models import PiezaStock, Receta, RecetaItem, RetazoTela
+from models import PiezaStock, Product, Receta, RecetaItem, RetazoTela
 from repositories.base import BaseRepository
 
 
@@ -40,6 +40,23 @@ class RecipeRepository(BaseRepository):
 
     def ultima_version(self, product_id):
         return self.session.query(func.max(Receta.version)).filter(Receta.producto_id == product_id).scalar() or 0
+
+    def vigentes(self):
+        """Versión vigente de cada producto (una consulta, con sus ítems)."""
+        momento = ahora()
+        return (
+            Receta.query.options(joinedload(Receta.items))
+            .filter(Receta.vigente_desde <= momento,
+                    (Receta.vigente_hasta.is_(None)) | (Receta.vigente_hasta > momento))
+            .order_by(Receta.version.desc())
+            .all()
+        )
+
+    def productos(self):
+        return Product.query.order_by(Product.nombre).all()
+
+    def producto_por_nombre(self, nombre):
+        return Product.query.filter(func.lower(Product.nombre) == nombre.strip().lower()).first()
 
 
 class ScrapRepository(BaseRepository):

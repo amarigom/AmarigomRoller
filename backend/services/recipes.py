@@ -1,5 +1,6 @@
 from datetime import date, datetime, time
 from decimal import Decimal
+from types import SimpleNamespace
 
 from flask import current_app
 
@@ -8,8 +9,10 @@ from models import PiezaStock, Product, Receta, RecetaItem
 from repositories.recipe import PieceRepository, RecipeRepository, ScrapRepository, ahora
 from repositories.supply import SupplyRepository
 from schemas.recipes import (
-    ExplosionItemOut, ExplosionOut, ProduccionOut, RecipeItemOut, RecipeVersionOut, StockDescontadoOut,
+    ExplosionItemOut, ExplosionOut, ProduccionOut, ProductIn, ProductRecipeOut, RecipeItemFullOut, RecipeItemIn,
+    RecipeItemOut, RecipeVersionIn, RecipeVersionOut, StockDescontadoOut,
 )
+from services import recipe_import
 from services.costeo import calcular_explosion
 from strategies import formulas
 from strategies.costing import MIN_RETAZO_PERFIL_CM, STRATEGIES, usa_perfiles
@@ -52,16 +55,18 @@ class RecipeService:
 
     def _calcular(self, product_id, w, h, opciones=None, fecha=None, version=None):
         receta = self._receta(product_id, fecha, version)
-        componentes = receta.items
+        resultado, total = self._calcular_items(receta.items, w, h, opciones)
+        return receta, resultado, total
+
+    def _calcular_items(self, componentes, w, h, opciones=None):
         ids_insumo = {c.id_insumo for c in componentes if c.id_insumo}
         ids_perfil = {c.id_insumo for c in componentes if c.id_insumo and usa_perfiles(c.tipo_calculo)}
         retazos = self.scraps.available_by_supply(ids_insumo)
         sobrantes = self.pieces.remnants_by_supply(ids_perfil)
-        resultado, total = calcular_explosion(
+        return calcular_explosion(
             componentes, retazos, w, h, sobrantes_perfil=sobrantes, opciones=opciones,
             min_retazo_cm=current_app.config.get('MIN_RETAZO_PERFIL_CM', MIN_RETAZO_PERFIL_CM),
         )
-        return receta, resultado, total
 
     @staticmethod
     def _mano_obra(resultado):
@@ -71,9 +76,12 @@ class RecipeService:
 
     def explode(self, product_id, w, h, opciones=None, fecha=None, version=None):
         receta, resultado, total = self._calcular(product_id, w, h, opciones, fecha, version)
+        return self._explosion_out(receta.version, resultado, total)
+
+    def _explosion_out(self, version, resultado, total):
         minutos, mano_obra = self._mano_obra(resultado)
         return ExplosionOut(
-            version=receta.version,
+            version=version,
             explosion=[ExplosionItemOut(**r) for r in resultado],
             total_materiales=total,
             total_minutos=minutos,
@@ -81,9 +89,66 @@ class RecipeService:
             total=round(total + mano_obra, 2),
         )
 
+    # --- Herramientas de edición -----------------------------------------------------------
+
+    def products(self):
+        """Productos con la versión de receta vigente (para el panel de recetas)."""
+        vigentes = {}
+        for r in self.recipes.vigentes():
+            vigentes.setdefault(r.producto_id, r)
+        return [
+            ProductRecipeOut(
+                id=p.id, nombre=p.nombre, categoria=p.categoria,
+                version_vigente=vigentes[p.id].version if p.id in vigentes else None,
+                items=len(vigentes[p.id].items) if p.id in vigentes else 0,
+            )
+            for p in self.recipes.productos()
+        ]
+
+    def create_product(self, datos):
+        if self.recipes.producto_por_nombre(datos.nombre) is not None:
+            raise ConflictError(f"Ya existe un producto llamado '{datos.nombre}'")
+        producto = Product(nombre=datos.nombre.strip(), categoria=datos.categoria, activo=True)
+        self.recipes.session.add(producto)
+        self.recipes.commit()
+        return ProductRecipeOut(id=producto.id, nombre=producto.nombre, categoria=producto.categoria,
+                                version_vigente=None, items=0)
+
+    def version_detail(self, product_id, version=None):
+        receta = self.recipes.por_version(product_id, version) if version else self.recipes.vigente(product_id)
+        if receta is None:
+            raise NotFoundError("Esa versión de la receta no existe")
+        return [RecipeItemFullOut.from_model(i) for i in receta.items]
+
+    def preview(self, datos):
+        """Calcula una receta sin guardarla (no toca la base): vista previa para medidas de prueba."""
+        self._validar_items(datos.items)
+        componentes = self._items_transitorios(datos.items)
+        resultado, total = self._calcular_items(componentes, datos.w, datos.h, datos.opciones)
+        return self._explosion_out(None, resultado, total)
+
+    def _items_transitorios(self, items):
+        insumos = {s.id: s for s in self.supplies.get_many({i.id_insumo for i in items if i.id_insumo})}
+        # Objetos simples: así no se agregan a la sesión de la base
+        return [
+            SimpleNamespace(insumo=insumos.get(i.id_insumo), **i.model_dump())
+            for i in items
+        ]
+
+    def duplicate(self, product_id, datos):
+        """Copia una versión de receta a un producto nuevo para armar variantes rápido."""
+        origen = self.recipes.por_version(product_id, datos.version) if datos.version else self.recipes.vigente(product_id)
+        if origen is None:
+            raise NotFoundError("No hay una receta para duplicar")
+        producto = self.create_product(ProductIn(nombre=datos.nombre, categoria=origen.producto.categoria))
+        items = [RecipeItemIn(**{k: getattr(i, k) for k in RecipeItemIn.model_fields}) for i in origen.items]
+        version = self.publish_version(
+            producto.id, RecipeVersionIn(items=items, nota=f"Copia de {origen.producto.nombre} v{origen.version}"))
+        return producto, version
+
     # --- Versionado ------------------------------------------------------------------------
 
-    def publish_version(self, product_id, datos):
+    def publish_version(self, product_id, datos, commit=True):
         """Crea una versión nueva y cierra la vigente: los cálculos con fecha anterior no cambian."""
         if self.recipes.session.get(Product, product_id) is None:
             raise NotFoundError(f"El producto {product_id} no existe")
@@ -102,8 +167,43 @@ class RecipeService:
         for orden, item in enumerate(datos.items):
             receta.items.append(RecetaItem(orden=orden, nombre=item.nombre, **item.model_dump(exclude={'nombre'})))
         self.recipes.add(receta)
-        self.recipes.commit()
+        if commit:
+            self.recipes.commit()
+        else:
+            self.recipes.session.flush()
         return RecipeVersionOut.from_model(receta)
+
+    def import_csv(self, datos):
+        """Carga recetas en lote. Todo o nada: si hay un error no se guarda ningún producto."""
+        productos, errores = recipe_import.parsear(datos.csv)
+        for nombre, items in productos.items():
+            try:
+                self._validar_items(items)
+            except ValidationFailed as exc:
+                errores.extend(f"{nombre}: {d}" for d in exc.detalles)
+        if errores:
+            raise ValidationFailed("El archivo tiene errores", detalles=errores)
+
+        resumen = []
+        try:
+            for nombre, items in productos.items():
+                producto = self.recipes.producto_por_nombre(nombre)
+                existente = producto is not None
+                version = (self.recipes.ultima_version(producto.id) if existente else 0) + 1
+                if datos.aplicar:
+                    if not existente:
+                        producto = Product(nombre=nombre, activo=True)
+                        self.recipes.session.add(producto)
+                        self.recipes.session.flush()
+                    self.publish_version(
+                        producto.id, RecipeVersionIn(items=items, nota=datos.nota or 'Importada desde CSV'), commit=False)
+                resumen.append({'producto': nombre, 'existe': existente, 'items': len(items), 'version': version})
+            if datos.aplicar:
+                self.recipes.commit()
+        except Exception:
+            self.recipes.session.rollback()
+            raise
+        return {'aplicado': datos.aplicar, 'productos': resumen}
 
     def _validar_items(self, items):
         errores = []

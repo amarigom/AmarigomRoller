@@ -3,7 +3,7 @@
 import { useState } from "react" // Agregamos estado local para el móvil
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Package, Users, Calculator, ClipboardList, ChevronLeft, ChevronRight, Menu, X, LogOut, UserCog } from "lucide-react"
+import { Package, Users, Calculator, ClipboardList, ChevronLeft, ChevronRight, Menu, X, LogOut, UserCog, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { hasPermission, logout, type Session } from "@/lib/api"
 
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { href: "/gestion/inventario", label: "Inventario", icon: Package, permission: "inventory:read" },
   { href: "/gestion/clientes", label: "Clientes", icon: Users, permission: "clients:read" },
   { href: "/gestion/calculadora", label: "Calculadora de Corte", icon: Calculator, permission: "recipes:read" },
+  { href: "/gestion/recetas", label: "Recetas", icon: BookOpen, permission: "recipes:write" },
   { href: "/gestion/ordenes", label: "Ordenes", icon: ClipboardList, permission: "inventory:read" },
   { href: "/gestion/usuarios", label: "Usuarios", icon: UserCog, permission: "users:manage" },
 ]

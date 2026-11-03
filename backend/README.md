@@ -28,6 +28,17 @@ Publicar una versión cierra la vigente, así los cálculos con `fecha=YYYY-MM-D
   Permitido: `+ - * / // %`, comparaciones, `and/or/not`, `a if c else b`, `ceil floor round min max abs`.
 - Cada ítem tiene `merma_pct` y `minutos_mano_obra`; el tipo `perfil` calcula piezas de 2/4/6 m con reutilización de sobrantes.
 
+### Herramientas del equipo (admin, pantalla `/gestion/recetas`)
+
+- `GET /api/recipes/products` (productos con versión vigente) y `POST /api/recipes/products`.
+- `GET /api/recipes/<pid>/detail?version=N`: ítems completos para editar.
+- `POST /api/recipes/preview`: calcula una receta sin guardarla, con medidas y opciones de prueba (valida igual que al publicar).
+- `POST /api/recipes/<pid>/duplicate`: copia la receta a un producto nuevo.
+- `POST /api/recipes/import` con `{csv, aplicar}`: carga en lote desde CSV (separador `;` o `,`, decimales con coma).
+  Con `aplicar: false` solo valida. Es todo o nada. Columnas: `GET /api/recipes/import/template`.
+- Regresión de cálculo: casos reales en `tests/regression_cases.json` (los corre `tests/test_regresion_calculo.py`).
+  Para sumar un caso se agrega al JSON con el total revisado a mano.
+
 ## Roles y permisos
 
 Definidos en `security/permissions.py`. Los endpoints piden un permiso, no un rol.
