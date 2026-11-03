@@ -1,7 +1,35 @@
 from sqlalchemy.orm import joinedload
 
-from models import RecipeBOM, RetazoTela
+from models import PiezaStock, RecipeBOM, RetazoTela
 from repositories.base import BaseRepository
+
+
+class PieceRepository(BaseRepository):
+    model = PiezaStock
+
+    def remnants_by_supply(self, supply_ids):
+        """Sobrantes de perfil aún utilizables, agrupados por insumo."""
+        if not supply_ids:
+            return {}
+        rows = PiezaStock.query.filter(
+            PiezaStock.id_insumo.in_(supply_ids),
+            PiezaStock.es_retazo.is_(True),
+            PiezaStock.longitud_actual_cm > 0,
+        ).order_by(PiezaStock.id).all()
+        agrupados = {}
+        for r in rows:
+            agrupados.setdefault(r.id_insumo, []).append(r)
+        return agrupados
+
+    def lock_remnants(self, piece_ids):
+        if not piece_ids:
+            return {}
+        rows = PiezaStock.query.filter(
+            PiezaStock.id.in_(piece_ids),
+            PiezaStock.es_retazo.is_(True),
+            PiezaStock.longitud_actual_cm > 0,
+        ).with_for_update().all()
+        return {r.id: r for r in rows}
 
 
 class RecipeRepository(BaseRepository):

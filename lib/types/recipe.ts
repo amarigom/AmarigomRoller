@@ -26,7 +26,16 @@ export interface RecipeComponent {
   medida_corte: string;    // Ej: "155 x 210"
   precio_unitario: number;
   costo_parcial: number;
-  metodo?: "ROLLO" | "RETAZO"; 
+  metodo?: "ROLLO" | "RETAZO" | "BARRA" | "PERFIL" | "UNIDAD" | "MANO_OBRA";
   id_retazo?: number;         
   mensaje?: string;        // Si hay un ahorro detectado
+  merma_pct?: number;
+  minutos?: number;        // Mano de obra del componente
+}
+
+export interface ExplosionTotals {
+  total_materiales: number;
+  total_minutos: number;
+  total_mano_obra: number;
+  total: number;
 }

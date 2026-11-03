@@ -21,12 +21,18 @@ class ExplosionItemOut(BaseModel):
     metodo: str
     id_retazo: Optional[int]
     mensaje: str
+    merma_pct: float = 0
+    minutos: float = 0
+    cortes: list[dict] = []
 
 
 class ExplosionOut(BaseModel):
     status: str = "success"
     explosion: list[ExplosionItemOut]
     total_materiales: float
+    total_minutos: float = 0
+    total_mano_obra: float = 0
+    total: float = 0
 
 
 class StockDescontadoOut(BaseModel):
@@ -41,7 +47,11 @@ class ProduccionOut(BaseModel):
     status: str = "success"
     descontado: list[StockDescontadoOut]
     retazos_usados: list[int]
+    retazos_perfil_generados: int = 0
     total_materiales: float
+    total_minutos: float = 0
+    total_mano_obra: float = 0
+    total: float = 0
 
 
 class RecipeItemOut(BaseModel):

@@ -11,6 +11,7 @@ class InsumoIn(BaseModel):
     precio_costo_unitario: float = Field(0, ge=0)
     stock_actual: float = Field(0, ge=0)
     ancho_cm: float = Field(0, ge=0)
+    largo_pieza_cm: Optional[float] = Field(None, gt=0)
 
 
 class SupplyOut(BaseModel):

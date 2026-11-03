@@ -54,3 +54,7 @@ class Config:
 
     # Base nueva: AUTO_CREATE_TABLES=1 una sola vez y luego `flask db upgrade`
     AUTO_CREATE_TABLES = os.environ.get('AUTO_CREATE_TABLES') == '1'
+
+    # Producción: sobrante mínimo de un perfil para guardarlo como retazo y costo de la mano de obra
+    MIN_RETAZO_PERFIL_CM = float(os.environ.get('MIN_RETAZO_PERFIL_CM', 95))
+    COSTO_MINUTO_MANO_OBRA = float(os.environ.get('COSTO_MINUTO_MANO_OBRA', 0))

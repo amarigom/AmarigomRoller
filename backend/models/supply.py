@@ -17,3 +17,5 @@ class Supply(db.Model):
     precio_costo_unitario = db.Column(db.Numeric(12, 4))
     stock_actual = db.Column(db.Numeric(12, 4))
     ancho_cm = db.Column(db.Numeric(10, 2))
+    # Largo de la pieza que se compra (perfil de 200/400/600 cm, rollo de cinta de 5000 cm)
+    largo_pieza_cm = db.Column(db.Numeric(10, 2))

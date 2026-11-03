@@ -18,5 +18,7 @@ class RecipeBOM(db.Model):
     tipo_calculo = db.Column(db.String(30), nullable=False)
     descripcion = db.Column(db.Text)
     cantidad_base = db.Column(db.Numeric(12, 4), default=1.0000)
+    merma_pct = db.Column(db.Numeric(5, 2), default=0)
+    minutos_mano_obra = db.Column(db.Numeric(8, 2), default=0)
 
     insumo = db.relationship('Supply', backref='recetas')

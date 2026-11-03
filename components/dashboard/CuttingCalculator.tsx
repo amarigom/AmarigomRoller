@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react"
 import { Calculator, Scissors, Check, Loader2, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { apiFetch, getSession, hasPermission } from "@/lib/api"
-import type { RecipeComponent, RecipeItem } from "@/lib/types/recipe"
+import type { ExplosionTotals, RecipeComponent, RecipeItem } from "@/lib/types/recipe"
 
 interface CuttingCalculatorProps {
   selectedProductId: number | null;
@@ -22,6 +22,7 @@ export default function CuttingCalculator({
   const [windowWidth, setWindowWidth] = useState("")
   const [windowHeight, setWindowHeight] = useState("")
   const [explosion, setExplosion] = useState<RecipeComponent[] | null>(null)
+  const [totals, setTotals] = useState<ExplosionTotals | null>(null)
   const [loading, setLoading] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [producing, setProducing] = useState(false)
@@ -70,9 +71,16 @@ export default function CuttingCalculator({
       const data = await response.json()
       if (data.status === "success") {
         setExplosion(data.explosion)
+        setTotals({
+          total_materiales: data.total_materiales ?? 0,
+          total_minutos: data.total_minutos ?? 0,
+          total_mano_obra: data.total_mano_obra ?? 0,
+          total: data.total ?? data.total_materiales ?? 0,
+        })
       }
     } catch (error) {
       setExplosion(null)
+      setTotals(null)
     } finally {
       setLoading(false)
     }
@@ -87,8 +95,8 @@ export default function CuttingCalculator({
   }, [windowWidth, windowHeight, selectedProductId])
 
   const totalCost = useMemo(() => 
-    explosion?.reduce((acc, item) => acc + item.costo_parcial, 0) || 0
-  , [explosion])
+    totals?.total ?? explosion?.reduce((acc, item) => acc + item.costo_parcial, 0) ?? 0
+  , [explosion, totals])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -175,6 +183,9 @@ export default function CuttingCalculator({
                 <div>
                   <p className="text-white text-sm font-bold">{item.componente}</p>
                   <p className="text-[10px] text-[#6b6560] uppercase tracking-wider">Corte: {item.medida_corte}</p>
+                  {item.mensaje && <p className="text-[10px] text-[#c9a961]/80">{item.mensaje}</p>}
+                  {!!item.merma_pct && <p className="text-[10px] text-[#6b6560]">Merma {item.merma_pct}%</p>}
+                  {!!item.minutos && <p className="text-[10px] text-[#6b6560]">Mano de obra {item.minutos} min</p>}
                 </div>
                 <div className="text-right">
                   <p className="text-[#c9a961] font-mono text-sm">{item.consumo_m_o_m2} {item.unidad}</p>
@@ -195,6 +206,9 @@ export default function CuttingCalculator({
             <div>
               <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Costo Total</p>
               <p className="text-2xl text-white font-serif">${totalCost.toLocaleString('es-AR')}</p>
+              {!!totals?.total_mano_obra && (
+                <p className="text-[10px] text-[#6b6560]">Incluye mano de obra: ${totals.total_mano_obra.toLocaleString('es-AR')} ({totals.total_minutos} min)</p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-[9px] text-[#6b6560] uppercase mb-1 font-bold">PVP Sugerido (40%)</p>
