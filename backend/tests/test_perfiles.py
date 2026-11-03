@@ -7,7 +7,8 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from extensions import db
-from models import PiezaStock, RecipeBOM, Supply, SupplyCategory
+from models import PiezaStock, Supply, SupplyCategory
+from tests.helpers import crear_receta
 from services.costeo import calcular_explosion
 from strategies.costing import ComponentInput, WidthLinearStrategy
 
@@ -133,13 +134,10 @@ def _seed_perfil(stock_cm=1200):
                   precio_costo_unitario=PRECIO_CM, stock_actual=stock_cm, largo_pieza_cm=400)
     db.session.add(tubo)
     db.session.flush()
-    db.session.add_all([
-        RecipeBOM(id_padre=1, id_insumo=tubo.id, nombre_producto="Tubo", tipo_calculo="perfil",
-                  delta_ancho_cm=-1.5),
-        RecipeBOM(id_padre=1, id_insumo=None, nombre_producto="Armado", tipo_calculo="mano_obra",
-                  minutos_mano_obra=30),
+    crear_receta(1, [
+        dict(id_insumo=tubo.id, nombre="Tubo", tipo_calculo="perfil", delta_ancho_cm=-1.5),
+        dict(id_insumo=None, nombre="Armado", tipo_calculo="mano_obra", minutos_mano_obra=30),
     ])
-    db.session.commit()
     return tubo
 
 

@@ -1,7 +1,8 @@
 import pytest
 
 from extensions import db
-from models import RecipeBOM, RetazoTela, Supply, SupplyCategory
+from models import RetazoTela, Supply, SupplyCategory
+from tests.helpers import crear_receta
 
 
 def _seed_receta():
@@ -12,9 +13,7 @@ def _seed_receta():
                   precio_costo_unitario=15000, stock_actual=50, ancho_cm=210)
     db.session.add(tela)
     db.session.flush()
-    db.session.add(RecipeBOM(id_padre=1, id_insumo=tela.id, nombre_producto="Tela",
-                             tipo_calculo="lineal_alto"))
-    db.session.commit()
+    crear_receta(1, [dict(id_insumo=tela.id, nombre="Tela", tipo_calculo="lineal_alto")])
     return tela
 
 
@@ -44,8 +43,7 @@ def test_receta_usa_retazo(client, auth):
 
 def test_receta_tipo_de_calculo_desconocido(client, auth):
     tela = _seed_receta()
-    db.session.add(RecipeBOM(id_padre=2, id_insumo=tela.id, nombre_producto="X", tipo_calculo="inventado"))
-    db.session.commit()
+    crear_receta(2, [dict(id_insumo=tela.id, nombre="X", tipo_calculo="inventado")])
     assert client.get("/api/test-recipe/2", headers=auth("admin")).status_code == 422
 
 

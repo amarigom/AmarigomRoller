@@ -1,5 +1,6 @@
 from extensions import db
-from models import RecipeBOM, RetazoTela, Supply, SupplyCategory
+from models import RetazoTela, Supply, SupplyCategory
+from tests.helpers import crear_receta
 
 
 def _seed(stock=50):
@@ -12,11 +13,10 @@ def _seed(stock=50):
                     precio_costo_unitario=500, stock_actual=10)
     db.session.add_all([tela, cadena])
     db.session.flush()
-    db.session.add_all([
-        RecipeBOM(id_padre=1, id_insumo=tela.id, nombre_producto="Tela", tipo_calculo="lineal_alto"),
-        RecipeBOM(id_padre=1, id_insumo=cadena.id, nombre_producto="Cadena", tipo_calculo="fijo", cantidad_base=2),
+    crear_receta(1, [
+        dict(id_insumo=tela.id, nombre="Tela", tipo_calculo="lineal_alto"),
+        dict(id_insumo=cadena.id, nombre="Cadena", tipo_calculo="fijo", cantidad_base=2),
     ])
-    db.session.commit()
     return tela, cadena
 
 

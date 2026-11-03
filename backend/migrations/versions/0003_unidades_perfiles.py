@@ -42,8 +42,23 @@ def _add_column(bind, table, column):
         op.add_column(table, column)
 
 
+def _ampliar_check(bind, table, nombre, columna, valores):
+    """Reemplaza un CHECK de lista de valores por una lista ampliada (solo PostgreSQL)."""
+    if bind.dialect.name != 'postgresql':
+        return
+    existentes = {c['name'] for c in sa.inspect(bind).get_check_constraints(table)}
+    if nombre in existentes:
+        op.drop_constraint(nombre, table, type_='check')
+    lista = ", ".join(f"'{v}'" for v in valores)
+    op.create_check_constraint(nombre, table, f"{columna} IN ({lista})")
+
+
 def upgrade():
     bind = op.get_bind()
+    _ampliar_check(bind, 'insumos', 'insumos_unidad_medida_check', 'unidad_medida',
+                   ['unidad', 'cm', 'metro', 'm2', 'rollo'])
+    _ampliar_check(bind, 'recetas_bom', 'recetas_bom_tipo_calculo_check', 'tipo_calculo',
+                   ['lineal_ancho', 'lineal_alto', 'fijo', 'superficie', 'perfil', 'mano_obra'])
     _add_column(bind, 'insumos', sa.Column('largo_pieza_cm', sa.Numeric(10, 2)))
     _add_column(bind, 'recetas_bom', sa.Column('merma_pct', sa.Numeric(5, 2), server_default='0'))
     _add_column(bind, 'recetas_bom', sa.Column('minutos_mano_obra', sa.Numeric(8, 2), server_default='0'))

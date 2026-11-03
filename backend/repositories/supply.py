@@ -25,6 +25,11 @@ class SupplyRepository(BaseRepository):
         rows = Supply.query.filter(Supply.id.in_(supply_ids)).with_for_update().all()
         return {s.id: s for s in rows}
 
+    def get_many(self, supply_ids):
+        if not supply_ids:
+            return []
+        return Supply.query.filter(Supply.id.in_(list(supply_ids))).all()
+
     def category_exists(self, category_id):
         return self.session.get(SupplyCategory, category_id) is not None
 

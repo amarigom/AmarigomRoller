@@ -118,6 +118,8 @@ class FabricStrategy(CalculationStrategy):
 
 
 class SurfaceFabricStrategy(FabricStrategy):
+    """Tela cobrada por superficie (ancho × alto en m²), aprovechando retazos."""
+
     tipo = 'superficie'
     por_superficie = True
 

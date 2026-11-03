@@ -52,7 +52,7 @@ def test_migracion_sobre_esquema_viejo_corrige_datos(tmp_path):
     cfg.set_main_option("script_location", MIGRACIONES)
     with app.app_context():
         command.stamp(cfg, "0002_usuarios")
-        command.upgrade(cfg, "head")
+        command.upgrade(cfg, "0003_unidades_perfiles")
 
     with engine.connect() as c:
         insumos = {r[0]: r for r in c.execute(sa.text("SELECT id, unidad_medida, largo_pieza_cm FROM insumos"))}
