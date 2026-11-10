@@ -13,6 +13,7 @@ class RetazoTela(db.Model):
     largo_cm = db.Column(db.Numeric(10, 2), nullable=False)
     fecha_generado = db.Column(db.DateTime, default=db.func.current_timestamp())
     estado = db.Column(db.String(20), default='disponible')
+    referencia = db.Column(db.String(255))
     notas = db.Column(db.Text)
 
     insumo_base = db.relationship('Supply', backref='retazos')

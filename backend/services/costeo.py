@@ -1,6 +1,8 @@
 """Explosión de materiales de una receta (sin acceso a base de datos). La lógica por tipo vive en strategies.costing."""
 from dataclasses import asdict
 
+from flask import current_app, has_app_context
+
 from exceptions import UnprocessableError
 from strategies import formulas
 from strategies.costing import (
@@ -113,6 +115,17 @@ def calcular_explosion(componentes, retazos_por_insumo, w_pedido, h_pedido,
             retazos_usados.add(calculo.id_retazo)
         fila = asdict(calculo)
         fila['id_insumo'] = id_insumo
+        if item.tipo_calculo in ('lineal_alto', 'superficie') and calculo.metodo == 'ROLLO' and insumo:
+            ancho_sobrante = round(float(getattr(insumo, 'ancho_cm', 0) or 0) - ancho, 2)
+            minimo_retazo_tela = (
+                float(current_app.config.get('MIN_RETAZO_TELA_CM', 80)) if has_app_context() else 80.0
+            )
+            if ancho_sobrante > minimo_retazo_tela and alto > minimo_retazo_tela:
+                fila['retazo_tela'] = {
+                    'ancho_cm': ancho_sobrante,
+                    'largo_cm': round(alto, 2),
+                    'id_insumo': id_insumo,
+                }
         resultado.append(fila)
 
     total = round(sum(i['costo_parcial'] for i in resultado), 2)

@@ -21,6 +21,7 @@ export default function CuttingCalculator({
   
   const [windowWidth, setWindowWidth] = useState("")
   const [windowHeight, setWindowHeight] = useState("")
+  const [referencia, setReferencia] = useState("")
   const [explosion, setExplosion] = useState<RecipeComponent[] | null>(null)
   const [totals, setTotals] = useState<ExplosionTotals | null>(null)
   const [loading, setLoading] = useState(false)
@@ -33,7 +34,9 @@ export default function CuttingCalculator({
   useEffect(() => {
     setConfirmed(false)
     setProduceError(null)
-  }, [windowWidth, windowHeight, selectedProductId])
+    setExplosion(null)
+    setTotals(null)
+  }, [windowWidth, windowHeight, selectedProductId, referencia])
 
   const confirmarProduccion = async () => {
     if (!explosion || !selectedProductId) return
@@ -43,7 +46,9 @@ export default function CuttingCalculator({
     try {
       const response = await apiFetch(`/api/recipes/${selectedProductId}/produce`, {
         method: "POST",
-        body: JSON.stringify({ w: Number(windowWidth), h: Number(windowHeight) }),
+        body: JSON.stringify({
+          w: Number(windowWidth), h: Number(windowHeight), referencia: referencia || null,
+        }),
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -65,11 +70,17 @@ export default function CuttingCalculator({
     if (!windowWidth || !windowHeight || !selectedProductId) return;
     setLoading(true)
     try {
-      const response = await apiFetch(`/api/test-recipe/${selectedProductId}?w=${windowWidth}&h=${windowHeight}`)
-      if (!response.ok) throw new Error();
+      const params = new URLSearchParams({ w: windowWidth, h: windowHeight })
+      if (referencia) params.set("referencia", referencia)
+      const response = await apiFetch(`/api/test-recipe/${selectedProductId}?${params}`)
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        const detalle = Array.isArray(data.detalles) && data.detalles.length ? ` (${data.detalles.join("; ")})` : ""
+        throw new Error((data.message || "No se pudo calcular la receta") + detalle)
+      }
       
-      const data = await response.json()
       if (data.status === "success") {
+        setProduceError(null)
         setExplosion(data.explosion)
         setTotals({
           total_materiales: data.total_materiales ?? 0,
@@ -81,6 +92,7 @@ export default function CuttingCalculator({
     } catch (error) {
       setExplosion(null)
       setTotals(null)
+      setProduceError(error instanceof Error ? error.message : "Error al calcular la receta")
     } finally {
       setLoading(false)
     }
@@ -92,7 +104,7 @@ export default function CuttingCalculator({
       calcularReceta()
     }, 600)
     return () => clearTimeout(timer)
-  }, [windowWidth, windowHeight, selectedProductId])
+  }, [windowWidth, windowHeight, selectedProductId, referencia])
 
   const totalCost = useMemo(() => 
     totals?.total ?? explosion?.reduce((acc, item) => acc + item.costo_parcial, 0) ?? 0
@@ -116,6 +128,17 @@ export default function CuttingCalculator({
               onChange={(e) => setWindowWidth(e.target.value)}
               className="w-full bg-black border border-[#2a2520] p-3 rounded-xl text-white outline-none focus:border-[#c9a961] transition-all"
               placeholder="0.00"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] text-[#6b6560] uppercase ml-1">Referencia de presupuesto / pedido (opcional)</label>
+            <input
+              type="text"
+              value={referencia}
+              onChange={(e) => setReferencia(e.target.value)}
+              maxLength={255}
+              className="w-full bg-black border border-[#2a2520] p-3 rounded-xl text-white outline-none focus:border-[#c9a961] transition-all"
+              placeholder="Ej: PED-2026-001"
             />
           </div>
           <div className="space-y-1">

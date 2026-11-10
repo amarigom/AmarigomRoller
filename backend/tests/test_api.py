@@ -84,6 +84,20 @@ def test_eliminar_insumo(client, auth):
     db.session.commit()
     nuevo = client.post("/api/inventory", json={"name": "T", "categoria_id": cat.id}, headers=h).get_json()
     assert client.delete(f"/api/inventory/{nuevo['id']}", headers=h).status_code == 200
+    assert client.get("/api/inventory", headers=h).get_json() == []
+    assert client.get(f"/api/inventory/{nuevo['id']}/movements", headers=h).get_json()
+
+
+def test_archivar_insumo_con_stock_es_rechazado(client, auth):
+    h = auth("admin")
+    cat = SupplyCategory(name="Telas")
+    db.session.add(cat)
+    db.session.commit()
+    nuevo = client.post("/api/inventory", json={
+        "name": "T", "categoria_id": cat.id, "stock_actual": 5,
+    }, headers=h).get_json()
+    assert client.delete(f"/api/inventory/{nuevo['id']}", headers=h).status_code == 409
+    assert len(client.get("/api/inventory", headers=h).get_json()) == 1
 
 
 def test_clientes_validacion(client, auth):

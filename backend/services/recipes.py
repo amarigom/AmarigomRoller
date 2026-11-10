@@ -2,10 +2,11 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from types import SimpleNamespace
 
-from flask import current_app
+from flask import current_app, g
 
 from exceptions import ConflictError, NotFoundError, ValidationFailed
-from models import PiezaStock, Product, Receta, RecetaItem
+from models import InventoryMovement, PiezaStock, Product, Receta, RecetaItem, RetazoTela
+from repositories.inventory import InventoryRepository
 from repositories.recipe import PieceRepository, RecipeRepository, ScrapRepository, ahora
 from repositories.supply import SupplyRepository
 from schemas.recipes import (
@@ -22,11 +23,12 @@ _CONTEXTO_PRUEBA = {'ancho': 100.0, 'alto': 100.0}
 
 
 class RecipeService:
-    def __init__(self, recipes=None, scraps=None, supplies=None, pieces=None):
+    def __init__(self, recipes=None, scraps=None, supplies=None, pieces=None, inventory=None):
         self.recipes = recipes or RecipeRepository()
         self.scraps = scraps or ScrapRepository()
         self.supplies = supplies or SupplyRepository()
         self.pieces = pieces or PieceRepository()
+        self.inventory = inventory or InventoryRepository()
 
     # --- Lectura ---------------------------------------------------------------------------
 
@@ -53,19 +55,19 @@ class RecipeService:
             for tipo, s in sorted(STRATEGIES.items())
         ]
 
-    def _calcular(self, product_id, w, h, opciones=None, fecha=None, version=None):
+    def _calcular(self, product_id, w, h, opciones=None, fecha=None, version=None, referencia=None):
         receta = self._receta(product_id, fecha, version)
-        resultado, total = self._calcular_items(receta.items, w, h, opciones)
+        resultado, total = self._calcular_items(receta.items, w, h, opciones, referencia)
         return receta, resultado, total
 
-    def _calcular_items(self, componentes, w, h, opciones=None):
+    def _calcular_items(self, componentes, w, h, opciones=None, referencia=None):
         ids_insumo = {c.id_insumo for c in componentes if c.id_insumo}
         ids_perfil = {c.id_insumo for c in componentes if c.id_insumo and usa_perfiles(c.tipo_calculo)}
         ids_alt = {
             i for c in componentes if usa_perfiles(c.tipo_calculo) for i in (c.insumos_alternativos or [])
         }
         alternativos = {s.id: s for s in self.supplies.get_many(ids_alt)} if ids_alt else {}
-        retazos = self.scraps.available_by_supply(ids_insumo)
+        retazos = self.scraps.available_by_supply(ids_insumo, referencia)
         sobrantes = self.pieces.remnants_by_supply(ids_perfil | ids_alt)
         return calcular_explosion(
             componentes, retazos, w, h, sobrantes_perfil=sobrantes, opciones=opciones,
@@ -79,8 +81,8 @@ class RecipeService:
         costo_minuto = float(current_app.config.get('COSTO_MINUTO_MANO_OBRA', 0) or 0)
         return minutos, round(minutos * costo_minuto, 2)
 
-    def explode(self, product_id, w, h, opciones=None, fecha=None, version=None):
-        receta, resultado, total = self._calcular(product_id, w, h, opciones, fecha, version)
+    def explode(self, product_id, w, h, opciones=None, fecha=None, version=None, referencia=None):
+        receta, resultado, total = self._calcular(product_id, w, h, opciones, fecha, version, referencia)
         return self._explosion_out(receta.version, resultado, total)
 
     def _explosion_out(self, version, resultado, total):
@@ -129,7 +131,8 @@ class RecipeService:
         """Calcula una receta sin guardarla (no toca la base): vista previa para medidas de prueba."""
         self._validar_items(datos.items)
         componentes = self._items_transitorios(datos.items)
-        resultado, total = self._calcular_items(componentes, datos.w, datos.h, datos.opciones)
+        resultado, total = self._calcular_items(
+            componentes, datos.w, datos.h, datos.opciones, datos.referencia)
         return self._explosion_out(None, resultado, total)
 
     def _items_transitorios(self, items):
@@ -263,16 +266,17 @@ class RecipeService:
 
     # --- Producción ------------------------------------------------------------------------
 
-    def produce(self, product_id, w, h, opciones=None):
+    def produce(self, product_id, w, h, opciones=None, referencia=None):
         """Confirma una producción: descuenta stock y marca como usados los retazos.
 
         Se recalcula en el servidor (el cliente solo manda las medidas) y todo se aplica
         en una única transacción: si algo falta, no se descuenta nada.
         """
-        receta, resultado, total = self._calcular(product_id, w, h, opciones)
+        receta, resultado, total = self._calcular(
+            product_id, w, h, opciones, referencia=referencia)
 
         retazos_ids = {r['id_retazo'] for r in resultado if r['id_retazo'] is not None}
-        retazos = self.scraps.lock_available(retazos_ids)
+        retazos = self.scraps.lock_available(retazos_ids, referencia)
         if retazos_ids - set(retazos):
             self.scraps.session.rollback()
             raise ConflictError("Un retazo ya fue usado por otra producción. Recalculá la receta.")
@@ -302,15 +306,24 @@ class RecipeService:
             raise ConflictError("Stock insuficiente para producir", detalles=faltantes)
 
         descontados = []
+        referencia_movimiento = f"Producto {product_id}, receta v{receta.version}, {w:g}x{h:g} cm"
+        if referencia:
+            referencia_movimiento = f"{referencia}: {referencia_movimiento}"
         for insumo_id, cantidad in necesario.items():
             insumo = insumos[insumo_id]
             insumo.stock_actual = Decimal(insumo.stock_actual or 0) - cantidad
+            self.inventory.agregar_movimiento(InventoryMovement(
+                id_insumo=insumo_id, tipo='consumo', cantidad=-cantidad,
+                stock_resultante=insumo.stock_actual, referencia=referencia_movimiento,
+                notas='Consumo por producción', usuario_id=self._usuario_id(),
+            ))
             descontados.append(StockDescontadoOut(
                 id_insumo=insumo_id, insumo=insumo.name, cantidad=float(cantidad),
                 stock_restante=float(insumo.stock_actual), unidad=insumo.unidad_medida))
         for retazo in retazos.values():
             retazo.estado = 'usado'
         generados = self._aplicar_cortes_perfil(resultado, piezas)
+        retazos_tela_generados = self._aplicar_retazos_tela(resultado, referencia_movimiento)
         self.supplies.commit()
 
         minutos, mano_obra = self._mano_obra(resultado)
@@ -319,11 +332,32 @@ class RecipeService:
             descontado=descontados,
             retazos_usados=sorted(retazos),
             retazos_perfil_generados=generados,
+            retazos_tela_generados=retazos_tela_generados,
             total_materiales=total,
             total_minutos=minutos,
             total_mano_obra=mano_obra,
             total=round(total + mano_obra, 2),
         )
+
+    @staticmethod
+    def _usuario_id():
+        usuario = getattr(g, 'current_user', None)
+        return usuario.id if usuario else None
+
+    def _aplicar_retazos_tela(self, resultado, referencia):
+        minimo = float(current_app.config.get('MIN_RETAZO_TELA_CM', 80))
+        generados = 0
+        for fila in resultado:
+            retazo = fila.get('retazo_tela')
+            if not retazo or retazo['ancho_cm'] <= minimo or retazo['largo_cm'] <= minimo:
+                continue
+            self.scraps.add(RetazoTela(
+                id_insumo_base=retazo['id_insumo'], ancho_cm=retazo['ancho_cm'],
+                largo_cm=retazo['largo_cm'], estado='disponible',
+                referencia=referencia, notas='Retazo generado automáticamente al cortar un rollo',
+            ))
+            generados += 1
+        return generados
 
     def _aplicar_cortes_perfil(self, resultado, piezas):
         """Reproduce los cortes en orden: actualiza los sobrantes usados y guarda los nuevos."""

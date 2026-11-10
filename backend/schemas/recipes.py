@@ -12,6 +12,7 @@ class MedidasIn(BaseModel):
     # Para recalcular con la receta que estaba vigente (un presupuesto viejo no cambia)
     fecha: Optional[date] = None
     version: Optional[int] = Field(None, gt=0)
+    referencia: Optional[str] = Field(None, max_length=255)
 
 
 class RecipeItemIn(BaseModel):
@@ -47,6 +48,7 @@ class PreviewIn(BaseModel):
     w: float = Field(100.0, gt=0, le=MAX_MEDIDA_CM)
     h: float = Field(100.0, gt=0, le=MAX_MEDIDA_CM)
     opciones: dict = {}
+    referencia: Optional[str] = Field(None, max_length=255)
 
 
 class ProductIn(BaseModel):
@@ -141,6 +143,7 @@ class ProduccionOut(BaseModel):
     descontado: list[StockDescontadoOut]
     retazos_usados: list[int]
     retazos_perfil_generados: int = 0
+    retazos_tela_generados: int = 0
     total_materiales: float
     total_minutos: float = 0
     total_mano_obra: float = 0

@@ -62,26 +62,37 @@ class RecipeRepository(BaseRepository):
 class ScrapRepository(BaseRepository):
     model = RetazoTela
 
-    def available_by_supply(self, supply_ids):
+    def available_by_supply(self, supply_ids, referencia=None):
         """Retazos disponibles agrupados por insumo, en una sola consulta."""
         if not supply_ids:
             return {}
-        rows = RetazoTela.query.filter(
-            RetazoTela.id_insumo_base.in_(supply_ids),
-            RetazoTela.estado == 'disponible',
-        ).all()
+        query = RetazoTela.query.filter(RetazoTela.id_insumo_base.in_(supply_ids))
+        if referencia:
+            query = query.filter(
+                (RetazoTela.estado == 'disponible')
+                | ((RetazoTela.estado == 'reservado') & (RetazoTela.referencia == referencia))
+            )
+        else:
+            query = query.filter(RetazoTela.estado == 'disponible')
+        rows = query.all()
         agrupados = {}
         for r in rows:
             agrupados.setdefault(r.id_insumo_base, []).append(r)
         return agrupados
 
-    def lock_available(self, scrap_ids):
+    def lock_available(self, scrap_ids, referencia=None):
         """Retazos aún disponibles, bloqueados hasta el commit."""
         if not scrap_ids:
             return {}
-        rows = RetazoTela.query.filter(
-            RetazoTela.id.in_(scrap_ids), RetazoTela.estado == 'disponible'
-        ).with_for_update().all()
+        query = RetazoTela.query.filter(RetazoTela.id.in_(scrap_ids))
+        if referencia:
+            query = query.filter(
+                (RetazoTela.estado == 'disponible')
+                | ((RetazoTela.estado == 'reservado') & (RetazoTela.referencia == referencia))
+            )
+        else:
+            query = query.filter(RetazoTela.estado == 'disponible')
+        rows = query.with_for_update().all()
         return {r.id: r for r in rows}
 
 

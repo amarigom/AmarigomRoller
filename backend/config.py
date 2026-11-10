@@ -57,4 +57,5 @@ class Config:
 
     # Producción: sobrante mínimo de un perfil para guardarlo como retazo y costo de la mano de obra
     MIN_RETAZO_PERFIL_CM = float(os.environ.get('MIN_RETAZO_PERFIL_CM', 95))
+    MIN_RETAZO_TELA_CM = float(os.environ.get('MIN_RETAZO_TELA_CM', 80))
     COSTO_MINUTO_MANO_OBRA = float(os.environ.get('COSTO_MINUTO_MANO_OBRA', 0))

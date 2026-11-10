@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Plus, X, Loader2 } from "lucide-react"
 import InventoryView from "@/components/dashboard/InventoryView"
+import InventoryOperations from "@/components/dashboard/InventoryOperations"
 import { Supply } from "@/lib/types/dashboards"
 import { apiFetch } from "@/lib/api"
 
@@ -17,12 +18,15 @@ export default function InventarioPage() {
   const [loading, setLoading] = useState(true)
   const [issubmitting, setIsSubmitting] = useState(false) // Para evitar doble click
   const [showForm, setShowForm] = useState(false)
+  const [inventoryRevision, setInventoryRevision] = useState(0)
   
   const [newInsumo, setNewInsumo] = useState({
     code: "", 
     name: "", 
     metersLeft: "", 
+    stockMinimo: "",
     widthCm: "", 
+    pieceLengthCm: "",
     price: "", 
     categoryId: "", 
     unit: "metro"
@@ -81,7 +85,9 @@ export default function InventarioPage() {
       unidad_medida: newInsumo.unit,
       precio_costo_unitario: Number(newInsumo.price),
       stock_actual: Number(newInsumo.metersLeft),
-      ancho_cm: Number(newInsumo.widthCm) || 0
+      stock_minimo: Number(newInsumo.stockMinimo) || 0,
+      ancho_cm: Number(newInsumo.widthCm) || 0,
+      largo_pieza_cm: Number(newInsumo.pieceLengthCm) || null,
     }
 
     try {
@@ -93,8 +99,12 @@ export default function InventarioPage() {
 
       if (response.ok) {
         setShowForm(false)
-        setNewInsumo({ code: "", name: "", metersLeft: "", widthCm: "", price: "", categoryId: "", unit: "metro" })
+        setNewInsumo({
+          code: "", name: "", metersLeft: "", stockMinimo: "", widthCm: "", pieceLengthCm: "",
+          price: "", categoryId: "", unit: "metro",
+        })
         fetchData()
+        setInventoryRevision((revision) => revision + 1)
       } else {
         const errorData = await response.json()
         alert("Error al guardar: " + errorData.error)
@@ -174,6 +184,14 @@ export default function InventarioPage() {
             </div>
 
             <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Stock Mínimo</label>
+                <input type="number" min="0" step="any" placeholder="0.00"
+                  className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
+                  value={newInsumo.stockMinimo}
+                  onChange={e => setNewInsumo({...newInsumo, stockMinimo: e.target.value})} />
+            </div>
+
+            <div className="flex flex-col gap-1">
                 <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Ancho (cm)</label>
                 <input 
                   type="number" step="any" placeholder="Ej: 280" 
@@ -181,6 +199,14 @@ export default function InventarioPage() {
                   value={newInsumo.widthCm} 
                   onChange={e => setNewInsumo({...newInsumo, widthCm: e.target.value})} 
                 />
+            </div>
+
+            <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-[#6b6560] uppercase ml-1 font-bold">Largo de pieza (cm)</label>
+                <input type="number" min="0" step="any" placeholder="Perfiles / rollos"
+                  className="bg-black border border-[#2a2520] p-3 text-white rounded-xl text-sm"
+                  value={newInsumo.pieceLengthCm}
+                  onChange={e => setNewInsumo({...newInsumo, pieceLengthCm: e.target.value})} />
             </div>
 
             <div className="flex flex-col gap-1">
@@ -204,6 +230,8 @@ export default function InventarioPage() {
                     <option value="metro">Metros</option>
                     <option value="cm">Centímetros</option>
                     <option value="unidad">Unidades</option>
+                    <option value="rollo">Rollos</option>
+                    <option value="m2">m²</option>
                 </select>
             </div>
             
@@ -217,6 +245,8 @@ export default function InventarioPage() {
           </form>
         </div>
       )}
+
+      <InventoryOperations refreshKey={inventoryRevision} />
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">

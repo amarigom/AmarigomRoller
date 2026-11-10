@@ -12,7 +12,7 @@ from services import recipe_import
 
 recipes_bp = Blueprint('recipes', __name__)
 
-PARAMETROS_RESERVADOS = {'w', 'h', 'fecha', 'version', 'opciones'}
+PARAMETROS_RESERVADOS = {'w', 'h', 'fecha', 'version', 'opciones', 'referencia'}
 MAX_OPCIONES = 20
 
 
@@ -52,7 +52,8 @@ def explosion(product_id):
     medidas = _medidas(request.args.to_dict())
     resultado = container.recipe_service().explode(
         product_id, medidas.w, medidas.h,
-        opciones=_opciones(request.args.to_dict()), fecha=medidas.fecha, version=medidas.version)
+        opciones=_opciones(request.args.to_dict()), fecha=medidas.fecha, version=medidas.version,
+        referencia=medidas.referencia)
     return jsonify(resultado.model_dump())
 
 
@@ -64,7 +65,8 @@ def produce(product_id):
         raise ValidationFailed("Indicá el ancho (w) y el alto (h) en cm")
     medidas = _medidas(cuerpo)
     opciones = cuerpo.get('opciones') if isinstance(cuerpo.get('opciones'), dict) else {}
-    resultado = container.recipe_service().produce(product_id, medidas.w, medidas.h, _opciones(opciones))
+    resultado = container.recipe_service().produce(
+        product_id, medidas.w, medidas.h, _opciones(opciones), medidas.referencia)
     return jsonify(resultado.model_dump())
 
 

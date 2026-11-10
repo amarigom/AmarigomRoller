@@ -42,6 +42,23 @@ Publicar una versión cierra la vigente, así los cálculos con `fecha=YYYY-MM-D
 - Regresión de cálculo: casos reales en `tests/regression_cases.json` (los corre `tests/test_regresion_calculo.py`).
   Para sumar un caso se agrega al JSON con el total revisado a mano.
 
+## Inventario, precios y retazos
+
+- `inventario_movimientos` traza aperturas migradas, entradas, ajustes y consumos de producción. `insumos.stock_actual`
+  se conserva como saldo actual y se actualiza en la misma transacción que cada movimiento.
+- `POST /api/inventory/<id>/movements`: registrar una `entrada` positiva o un `ajuste` con signo; no permite saldo negativo.
+  La producción registra consumos con receta, medidas, referencia y usuario.
+- `PATCH /api/inventory/<id>/minimum`, `GET /api/inventory/purchase-suggestions`: stock mínimo y faltante sugerido.
+- `historial_precios_insumos` conserva el precio inicial y cada cambio. `POST /api/inventory/prices` aplica un porcentaje
+  o una lista `[{id_insumo, precio}]`; las calculadoras usan el precio actual.
+- `POST /api/inventory/scraps/<id>/reserve` y `/release`: reserva atómica con referencia para evitar que dos pedidos
+  asignen el mismo retazo. Usá la misma `referencia` al calcular y producir (`?referencia=...` o en el JSON de producción).
+- Al confirmar un corte de rollo se registra el sobrante lateral como retazo si **ancho y largo son mayores a 80 cm**.
+  `MIN_RETAZO_TELA_CM` configura ese umbral. El retazo y el consumo de stock se guardan en la misma transacción.
+
+El proyecto todavía no tiene una entidad persistente de pedidos confirmados. Por eso las sugerencias se basan en los mínimos
+configurados, no en la demanda futura; la referencia de reserva puede enlazarse a un pedido externo.
+
 ## Roles y permisos
 
 Definidos en `security/permissions.py`. Los endpoints piden un permiso, no un rol.
@@ -50,6 +67,7 @@ Definidos en `security/permissions.py`. Los endpoints piden un permiso, no un ro
 |---|:-:|:-:|:-:|
 | inventory:read / recipes:read | ✔ | ✔ | ✔ |
 | inventory:write | ✔ | | ✔ |
+| inventory:manage (mínimos y precios) | ✔ | | |
 | recipes:produce (confirmar producción: descuenta stock y usa retazos) | ✔ | | ✔ |
 | recipes:write (publicar versiones de receta) | ✔ | | |
 | inventory:delete | ✔ | | |
@@ -65,7 +83,7 @@ Tras `LOGIN_MAX_ATTEMPTS` fallos la cuenta se bloquea `LOGIN_LOCK_MINUTES` (429)
 ```powershell
 pip install -r requirements-dev.txt
 copy .env.example .env        # completar SECRET_KEY y DATABASE_URL
-flask --app app db upgrade    # migraciones (0001 índices, 0002 usuarios, 0003 unidades/perfiles, 0004 recetas versionadas)
+flask --app app db upgrade    # migraciones 0001-0006: índices, usuarios, unidades, recetas e inventario
 flask --app app create-admin  # primer administrador
 python app.py
 ```

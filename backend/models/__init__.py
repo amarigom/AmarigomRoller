@@ -7,8 +7,9 @@ from .product import Product
 from .recipe import Receta, RecetaItem
 from .client import Cliente
 from .user import User, Role
+from .inventory import InventoryMovement, SupplyPriceHistory
 
 __all__ = [
     'db', 'Supply', 'SupplyCategory', 'Receta', 'RecetaItem', 'RetazoTela', 'PiezaStock',
-    'Product', 'Cliente', 'User', 'Role',
+    'Product', 'Cliente', 'User', 'Role', 'InventoryMovement', 'SupplyPriceHistory',
 ]
