@@ -96,7 +96,7 @@ def run_migrations_online():
 
     connectable = get_engine()
 
-    with connectable.connect() as connection:
+    def run_with_connection(connection):
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),
@@ -105,6 +105,13 @@ def run_migrations_online():
 
         with context.begin_transaction():
             context.run_migrations()
+
+    connection = config.attributes.get('connection')
+    if connection is not None:
+        run_with_connection(connection)
+    else:
+        with connectable.connect() as connection:
+            run_with_connection(connection)
 
 
 if context.is_offline_mode():

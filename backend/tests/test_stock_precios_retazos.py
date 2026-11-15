@@ -11,7 +11,7 @@ def _insumo(name='Blackout', stock=10, minimo=0, precio=100, ancho=300):
         db.session.flush()
     insumo = Supply(
         categoria_id=cat.id, name=name, unidad_medida='metro',
-        precio_costo_unitario=precio, stock_actual=stock, stock_minimo=minimo, ancho_cm=ancho,
+        precio_costo_unitario=precio, stock_actual=stock, stock_minimo=minimo, ancho_cm=ancho, es_tela=True,
     )
     db.session.add(insumo)
     db.session.commit()
@@ -102,6 +102,70 @@ def test_produccion_registra_consumo_en_movimientos(client, auth):
     assert 'Producto 1' in consumos[0].referencia
 
 
+def test_produccion_guarda_historial_completo_y_enlaza_movimientos(client, auth):
+    tela = _insumo(stock=10, ancho=300)
+    crear_receta(1, [{'id_insumo': tela.id, 'nombre': 'Tela', 'tipo_calculo': 'lineal_alto'}])
+    h = auth('taller')
+    r = client.post('/api/recipes/1/produce', headers=h, json={
+        'w': 100, 'h': 120, 'referencia': 'PED-100', 'opciones': {'sistema': 'cadena'},
+    })
+    assert r.status_code == 200, r.get_json()
+    production_id = r.get_json()['produccion_id']
+    historial = client.get('/api/recipes/productions?referencia=PED-100', headers=auth('admin'))
+    assert historial.status_code == 200
+    registro = historial.get_json()[0]
+    assert registro['id'] == production_id
+    assert registro['producto_nombre'] == 'Producto 1'
+    assert registro['receta_version'] == 1
+    assert (registro['ancho_cm'], registro['alto_cm']) == (100, 120)
+    assert registro['opciones'] == {'sistema': 'cadena'}
+    assert registro['referencia'] == 'PED-100'
+    assert registro['usuario'] == 'Taller'
+    assert registro['total'] == 2320
+    assert registro['total_desgaste'] == 2000
+    assert registro['detalle'][0]['componente'] == 'Blackout'
+    movimiento = InventoryMovement.query.filter_by(tipo='consumo', id_insumo=tela.id).one()
+    assert movimiento.produccion_id == production_id
+    etiqueta = Supply.query.filter_by(codigo_sku='ROLLER-ETIQUETA').one()
+    consumo = InventoryMovement.query.filter_by(tipo='consumo', id_insumo=etiqueta.id).one()
+    assert (float(consumo.cantidad), consumo.produccion_id, float(etiqueta.stock_actual)) == (-1, production_id, 9999)
+
+
+def test_sin_etiquetas_la_produccion_no_descontara_otros_insumos(client, auth):
+    tela = _insumo(stock=10, ancho=300)
+    etiqueta = Supply.query.filter_by(codigo_sku='ROLLER-ETIQUETA').one()
+    etiqueta.stock_actual = 0
+    db.session.commit()
+    crear_receta(1, [{'id_insumo': tela.id, 'nombre': 'Tela', 'tipo_calculo': 'lineal_alto'}])
+    respuesta = client.post('/api/recipes/1/produce', headers=auth('taller'), json={'w': 100, 'h': 120})
+    assert respuesta.status_code == 409
+    assert 'Etiqueta' in str(respuesta.get_json())
+    db.session.refresh(tela)
+    assert float(tela.stock_actual) == 10
+    assert InventoryMovement.query.filter_by(tipo='consumo').count() == 0
+    assert client.get('/api/recipes/productions', headers=auth('taller')).get_json() == []
+
+
+def test_produccion_fallida_no_crea_registro_de_historial(client, auth):
+    tela = _insumo(stock=1, ancho=300)
+    crear_receta(1, [{'id_insumo': tela.id, 'nombre': 'Tela', 'tipo_calculo': 'lineal_alto'}])
+    respuesta = client.post('/api/recipes/1/produce', headers=auth('taller'), json={
+        'w': 100, 'h': 120,
+    })
+    assert respuesta.status_code == 409
+    assert client.get('/api/recipes/productions', headers=auth('taller')).get_json() == []
+
+
+def test_historial_produccion_filtra_por_producto_y_restringe_permisos(client, auth):
+    tela = _insumo(stock=10, ancho=300)
+    crear_receta(1, [{'id_insumo': tela.id, 'nombre': 'Tela', 'tipo_calculo': 'lineal_alto'}])
+    h = auth('taller')
+    client.post('/api/recipes/1/produce', headers=h, json={'w': 100, 'h': 120})
+    assert len(client.get('/api/recipes/productions?producto_id=1', headers=h).get_json()) == 1
+    assert client.get('/api/recipes/productions?producto_id=99', headers=h).status_code == 404
+    assert client.get('/api/recipes/productions', headers=auth('ventas')).status_code == 200
+
+
 def test_alertas_de_stock_minimo_y_ajuste_restringido_a_admin(client, auth):
     insumo = _insumo(stock=2, minimo=5)
     alertas = client.get('/api/inventory/alerts', headers=auth('ventas')).get_json()
@@ -122,7 +186,7 @@ def test_actualizacion_masiva_de_precios_crea_historial(client, auth):
         'porcentaje': 10, 'motivo': 'Lista noviembre',
     })
     assert r.status_code == 200, r.get_json()
-    assert r.get_json()['actualizados'] == 2
+    assert r.get_json()['actualizados'] == 3
     db.session.refresh(a)
     db.session.refresh(b)
     assert float(a.precio_costo_unitario) == 110 and float(b.precio_costo_unitario) == 220

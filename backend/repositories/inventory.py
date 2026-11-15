@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy.orm import joinedload
 
 from models import InventoryMovement, PiezaStock, RecetaItem, RetazoTela, Supply, SupplyPriceHistory
@@ -46,6 +48,36 @@ class InventoryRepository(BaseRepository):
             supply_id in (item.insumos_alternativos or [])
             for item in RecetaItem.query.filter_by(tipo_calculo='perfil').all()
         ) or self.session.query(RecetaItem.id).filter_by(id_insumo=supply_id).first() is not None
+
+    def es_perfil(self, supply_id):
+        insumo = self.session.get(Supply, supply_id)
+        categoria = insumo.category.name.lower() if insumo and insumo.category else ''
+        return ('perfil' in categoria or 'tubo' in categoria or
+                any(item.id_insumo == supply_id or supply_id in (item.insumos_alternativos or [])
+                    for item in RecetaItem.query.filter_by(tipo_calculo='perfil').all()))
+
+    def piezas_por_insumo(self, supply_id):
+        return (PiezaStock.query.filter_by(id_insumo=supply_id).filter(PiezaStock.longitud_actual_cm > 0)
+                .order_by(PiezaStock.id).populate_existing().with_for_update().all())
+
+    def resumen_perfiles(self, supply_ids):
+        piezas = PiezaStock.query.filter(PiezaStock.id_insumo.in_(supply_ids),
+                                         PiezaStock.longitud_actual_cm > 0).all() if supply_ids else []
+        perfiles = set()
+        for item in RecetaItem.query.filter_by(tipo_calculo='perfil').all():
+            perfiles.add(item.id_insumo)
+            perfiles.update(item.insumos_alternativos or [])
+        for insumo in Supply.query.filter(Supply.id.in_(supply_ids)).all():
+            categoria = insumo.category.name.lower() if insumo.category else ''
+            if 'perfil' in categoria or 'tubo' in categoria:
+                perfiles.add(insumo.id)
+        perfiles.update(p.id_insumo for p in piezas)
+        resumen = {}
+        for pieza in piezas:
+            fila = resumen.setdefault(pieza.id_insumo, {'enteras': 0, 'retazos': 0, 'total_cm': Decimal(0)})
+            fila['retazos' if pieza.es_retazo else 'enteras'] += 1
+            fila['total_cm'] += Decimal(pieza.longitud_actual_cm)
+        return perfiles, resumen
 
     def insumo_tiene_retazos_o_piezas(self, supply_id):
         return (

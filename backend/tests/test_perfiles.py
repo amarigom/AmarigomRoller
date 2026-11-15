@@ -158,6 +158,9 @@ def _seed_perfil(stock_cm=1200):
                   precio_costo_unitario=PRECIO_CM, stock_actual=stock_cm, largo_pieza_cm=400)
     db.session.add(tubo)
     db.session.flush()
+    if stock_cm == 1200:
+        db.session.add_all([PiezaStock(id_insumo=tubo.id, longitud_original_cm=400,
+                                      longitud_actual_cm=400, es_retazo=False) for _ in range(3)])
     crear_receta(1, [
         dict(id_insumo=tubo.id, nombre="Tubo", tipo_calculo="perfil", delta_ancho_cm=-1.5),
         dict(id_insumo=None, nombre="Armado", tipo_calculo="mano_obra", minutos_mano_obra=30),
@@ -168,12 +171,12 @@ def _seed_perfil(stock_cm=1200):
 def test_explosion_incluye_mano_de_obra_y_total(client, auth, app):
     app.config['COSTO_MINUTO_MANO_OBRA'] = 10
     _seed_perfil()
-    r = client.get("/api/test-recipe/1?w=150&h=200", headers=auth("ventas"))
+    r = client.get("/api/test-recipe/1?w=150&h=200", headers=auth("admin"))
     assert r.status_code == 200, r.get_json()
     body = r.get_json()
     assert body['total_minutos'] == 30
     assert body['total_mano_obra'] == 300.0
-    assert body['total'] == body['total_materiales'] + 300.0
+    assert body['total'] == body['total_materiales'] + 300.0 + 2000.0
 
 
 def test_producir_perfil_guarda_sobrante_y_la_siguiente_lo_aprovecha(client, auth):
@@ -202,6 +205,33 @@ def test_producir_perfil_sin_stock_no_guarda_sobrantes(client, auth):
     assert PiezaStock.query.count() == 0
 
 
+def test_saldo_sin_piezas_fisicas_no_permite_producir(client, auth):
+    tubo = _seed_perfil()
+    PiezaStock.query.filter_by(id_insumo=tubo.id).delete()
+    db.session.commit()
+    r = client.post("/api/recipes/1/produce", json={"w": 150, "h": 200}, headers=auth("taller"))
+    assert r.status_code == 409
+    assert 'piezas físicas' in r.get_json()['message']
+    assert float(db.session.get(Supply, tubo.id).stock_actual) == 1200
+
+
+def test_ingreso_de_perfiles_registra_piezas_y_movimiento(client, auth):
+    tubo = _seed_perfil(stock_cm=0)
+    h = auth('taller')
+    r = client.post(f'/api/inventory/{tubo.id}/pieces', headers=h,
+                    json={'cantidad': 2, 'referencia': 'Compra'})
+    assert r.status_code == 201, r.get_json()
+    assert float(db.session.get(Supply, tubo.id).stock_actual) == 800
+    assert PiezaStock.query.filter_by(id_insumo=tubo.id, es_retazo=False).count() == 2
+    assert client.post(f'/api/inventory/{tubo.id}/movements', headers=h,
+                       json={'tipo': 'entrada', 'cantidad': 400}).status_code == 409
+    assert client.post('/api/recipes/1/produce', headers=h, json={'w': 150, 'h': 200}).status_code == 200
+    data = client.get('/api/inventory', headers=h).get_json()
+    perfil = next(p for p in data if p['id'] == tubo.id)
+    assert perfil['piezas_conciliadas'] is True
+    assert perfil['piezas_enteras'] == 1 and perfil['piezas_retazos'] == 1
+
+
 # --- Perfiles alternativos (el corte nunca se empalma) --------------------------------------
 
 def _seed_con_alternativa():
@@ -211,8 +241,13 @@ def _seed_con_alternativa():
     corto = Supply(categoria_id=cat.id, name="Tubo 2 m", unidad_medida="cm", precio_costo_unitario=PRECIO_CM,
                    stock_actual=1000, largo_pieza_cm=200)
     largo = Supply(categoria_id=cat.id, name="Tubo 4 m", unidad_medida="cm", precio_costo_unitario=PRECIO_CM,
-                   stock_actual=1000, largo_pieza_cm=400)
+                   stock_actual=1200, largo_pieza_cm=400)
     db.session.add_all([corto, largo])
+    db.session.flush()
+    db.session.add_all([PiezaStock(id_insumo=corto.id, longitud_original_cm=200, longitud_actual_cm=200, es_retazo=False)
+                        for _ in range(5)])
+    db.session.add_all([PiezaStock(id_insumo=largo.id, longitud_original_cm=400, longitud_actual_cm=400, es_retazo=False)
+                        for _ in range(3)])
     db.session.commit()
     crear_receta(1, [{"id_insumo": corto.id, "nombre": "Tubo", "tipo_calculo": "perfil",
                       "insumos_alternativos": [largo.id]}])
@@ -235,8 +270,8 @@ def test_producir_descuenta_stock_del_perfil_elegido(client, auth):
     assert r.status_code == 200, r.get_json()
     db.session.expire_all()
     assert float(db.session.get(Supply, corto.id).stock_actual) == 1000
-    assert float(db.session.get(Supply, largo.id).stock_actual) == 1000 - 250
-    assert PiezaStock.query.one().id_insumo == largo.id
+    assert float(db.session.get(Supply, largo.id).stock_actual) == 1200 - 250
+    assert PiezaStock.query.filter_by(es_retazo=True).one().id_insumo == largo.id
 
 
 def test_sin_alternativa_el_ancho_largo_da_422(client, auth):

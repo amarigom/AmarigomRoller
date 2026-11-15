@@ -19,13 +19,11 @@ export interface RecipeItem {
 }
 
 // 2. EL RESULTADO (Lo que genera la calculadora tras poner las medidas)
-export interface RecipeComponent {
+export interface MaterialComponent {
   componente: string;      // Ej: "Tela Blackout"
   consumo_m_o_m2: number;  // Ej: 2.45
   unidad?: string;         // Unidad del insumo: metro, m2, unidad
   medida_corte: string;    // Ej: "155 x 210"
-  precio_unitario: number;
-  costo_parcial: number;
   metodo?: "ROLLO" | "RETAZO" | "BARRA" | "PERFIL" | "UNIDAD" | "MANO_OBRA";
   id_retazo?: number;         
   mensaje?: string;        // Si hay un ahorro detectado
@@ -33,11 +31,47 @@ export interface RecipeComponent {
   minutos?: number;        // Mano de obra del componente
 }
 
-export interface ExplosionTotals {
+export interface RecipeComponent extends MaterialComponent {
+  precio_unitario: number;
+  costo_parcial: number;
+  unidad_costo?: string | null;
+  cantidad_costo?: number | null;
+  cantidad_reposicion?: number | null;
+  costo_reposicion?: number;
+}
+
+export interface QuoteTotals {
+  precio_producto: {
+    precio_venta_final: number;
+  };
+  servicio_colocacion: {
+    km_ida: number;
+    km_totales: number;
+    total_colocacion: number;
+  };
+  total_presupuesto: number;
+}
+
+export interface ExplosionTotals extends QuoteTotals {
   total_materiales: number;
   total_minutos: number;
   total_mano_obra: number;
+  total_desgaste: number;
   total: number;
+  precio_producto: {
+    markup_pct: number;
+    ganancia_markup: number;
+    margen_sobre_ventas_pct: number;
+    precio_venta_final: number;
+  };
+  servicio_colocacion: {
+    tarifa_base: number;
+    km_ida: number;
+    km_totales: number;
+    costo_traslado: number;
+    total_colocacion: number;
+  };
+  total_presupuesto: number;
 }
 
 // 3. EDICIÓN DE RECETAS (versiones publicadas por el admin)

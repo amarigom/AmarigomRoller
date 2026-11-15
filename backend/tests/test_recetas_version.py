@@ -1,6 +1,6 @@
 import importlib
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import sqlalchemy as sa
 from alembic import command
@@ -8,7 +8,7 @@ from alembic.config import Config
 
 from extensions import db
 from factory import create_app
-from models import Receta, Supply, SupplyCategory
+from models import PiezaStock, Receta, Supply, SupplyCategory
 from tests.helpers import crear_receta
 
 MIGRACIONES = os.path.join(os.path.dirname(os.path.dirname(__file__)), "migrations")
@@ -25,6 +25,9 @@ def _insumos():
     cadena = Supply(categoria_id=cat.id, name="Cadena", unidad_medida="metro", precio_costo_unitario=200,
                     stock_actual=50)
     db.session.add_all([tubo, soporte, cadena])
+    db.session.flush()
+    db.session.add_all([PiezaStock(id_insumo=tubo.id, longitud_original_cm=400,
+                                  longitud_actual_cm=400, es_retazo=False) for _ in range(5)])
     db.session.commit()
     return tubo, soporte, cadena
 
@@ -41,11 +44,11 @@ def test_componente_condicional_por_ancho(client, auth):
         _item(tubo, tipo_calculo="perfil", delta_ancho_cm=-1.5),
         _item(soporte, tipo_calculo="fijo", condicion="ancho > 200"),
     ])
-    h = auth("ventas")
+    h = auth("admin")
     angosto = client.get("/api/test-recipe/1?w=150&h=200", headers=h).get_json()
     ancho = client.get("/api/test-recipe/1?w=250&h=200", headers=h).get_json()
-    assert [e["componente"] for e in angosto["explosion"]] == ["Tubo 4 mts"]
-    assert [e["componente"] for e in ancho["explosion"]] == ["Tubo 4 mts", "Soporte central"]
+    assert [e["componente"] for e in angosto["explosion"]] == ["Tubo 4 mts", "Etiqueta"]
+    assert [e["componente"] for e in ancho["explosion"]] == ["Tubo 4 mts", "Soporte central", "Etiqueta"]
     assert ancho["total_materiales"] == angosto["total_materiales"] + 100 * 0 + 1000 + (250 - 150) * 50
 
 
@@ -59,7 +62,7 @@ def test_variante_por_opcion_sistema(client, auth):
     con = client.get("/api/test-recipe/1?w=150&h=200&sistema=cadena", headers=h).get_json()
     sin = client.get("/api/test-recipe/1?w=150&h=200&sistema=motor", headers=h).get_json()
     sin_opcion = client.get("/api/test-recipe/1?w=150&h=200", headers=h).get_json()
-    assert len(con["explosion"]) == 2 and len(sin["explosion"]) == 1 and len(sin_opcion["explosion"]) == 1
+    assert len(con["explosion"]) == 3 and len(sin["explosion"]) == 2 and len(sin_opcion["explosion"]) == 2
 
 
 def test_formulas_de_medida_y_cantidad(client, auth):
@@ -68,8 +71,9 @@ def test_formulas_de_medida_y_cantidad(client, auth):
         _item(tubo, tipo_calculo="perfil", formula_ancho="ancho - 3"),
         _item(soporte, tipo_calculo="fijo", formula_cantidad="ceil(ancho / 100)"),
     ])
-    data = client.get("/api/test-recipe/1?w=250&h=200", headers=auth("ventas")).get_json()
-    tubo_r, soporte_r = data["explosion"]
+    data = client.get("/api/test-recipe/1?w=250&h=200", headers=auth("admin")).get_json()
+    tubo_r, soporte_r, etiqueta_r = data["explosion"]
+    assert etiqueta_r["costo_parcial"] == 200
     assert tubo_r["consumo_m_o_m2"] == 247
     assert soporte_r["consumo_m_o_m2"] == 3 and soporte_r["costo_parcial"] == 3000
 
@@ -99,7 +103,7 @@ def test_publicar_version_cierra_la_anterior_y_no_cambia_el_pasado(client, auth)
     tubo, soporte, _ = _insumos()
     crear_receta(1, [_item(soporte, tipo_calculo="fijo", cantidad_base=1)],
                  desde=datetime(2025, 1, 1))
-    hoy = datetime.now().date()
+    hoy = datetime.now(timezone.utc).date()
 
     nueva = client.post("/api/recipes/1/versions", headers=auth("admin"), json={
         "nota": "Ahora lleva 2 soportes",
@@ -108,14 +112,14 @@ def test_publicar_version_cierra_la_anterior_y_no_cambia_el_pasado(client, auth)
     assert nueva.status_code == 201, nueva.get_json()
     assert nueva.get_json()["version"] == 2
 
-    h = auth("ventas")
+    h = auth("admin")
     vigente = client.get("/api/test-recipe/1?w=150&h=200", headers=h).get_json()
-    assert vigente["version"] == 2 and vigente["total_materiales"] == 2000
+    assert vigente["version"] == 2 and vigente["total_materiales"] == 2200
     # un presupuesto de una fecha anterior sigue dando el mismo resultado
     viejo = client.get("/api/test-recipe/1?w=150&h=200&fecha=2025-06-01", headers=h).get_json()
-    assert viejo["version"] == 1 and viejo["total_materiales"] == 1000
+    assert viejo["version"] == 1 and viejo["total_materiales"] == 1200
     por_version = client.get("/api/test-recipe/1?w=150&h=200&version=1", headers=h).get_json()
-    assert por_version["total_materiales"] == 1000
+    assert por_version["total_materiales"] == 1200
 
     versiones = client.get("/api/recipes/1/versions", headers=h).get_json()
     assert [v["version"] for v in versiones] == [2, 1]
@@ -195,6 +199,7 @@ def test_migracion_copia_recetas_bom_como_version_1(tmp_path):
     with engine.begin() as c:
         c.execute(sa.text("CREATE TABLE productos (id INTEGER PRIMARY KEY, nombre TEXT, descripcion TEXT, "
                           "categoria TEXT, activo BOOLEAN)"))
+        c.execute(sa.text("CREATE TABLE usuarios (id INTEGER PRIMARY KEY)"))
         c.execute(sa.text("CREATE TABLE insumos (id INTEGER PRIMARY KEY, name TEXT)"))
         c.execute(sa.text(
             "CREATE TABLE recetas_bom (id INTEGER PRIMARY KEY, nombre_producto TEXT, id_insumo INTEGER, "
@@ -212,8 +217,8 @@ def test_migracion_copia_recetas_bom_como_version_1(tmp_path):
     cfg.set_main_option("script_location", MIGRACIONES)
     with app.app_context():
         command.stamp(cfg, "0003_unidades_perfiles")
-        command.upgrade(cfg, "head")
-        command.upgrade(cfg, "head")  # idempotente
+        command.upgrade(cfg, "0006_stock_precios_retazos")
+        command.upgrade(cfg, "0006_stock_precios_retazos")  # idempotente
 
     with engine.connect() as c:
         recetas = [tuple(r) for r in c.execute(sa.text("SELECT producto_id, version FROM recetas ORDER BY producto_id"))]

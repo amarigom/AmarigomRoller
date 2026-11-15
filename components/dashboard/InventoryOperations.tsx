@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { apiFetch, getSession, hasPermission } from "@/lib/api"
+import ProfileReconciliation from "./ProfileReconciliation"
+import StockReconciliation from "./StockReconciliation"
+import PriceSyncStatus from "./PriceSyncStatus"
+import { displayNumber, linearDisplay } from "@/lib/display-units"
 
 interface Supply {
   id: number
@@ -9,7 +13,14 @@ interface Supply {
   unit: string | null
   metersLeft: number
   stock_minimo: number
-  price: number
+  price?: number
+  es_tela: boolean
+  precio_m2?: number | null
+  widthCm: number
+  largo_pieza_cm: number | null
+  perfil_en_receta: boolean
+  unidad_compra: string | null
+  factor_conversion: number | null
 }
 interface Movement {
   id: number
@@ -20,13 +31,16 @@ interface Movement {
   notas: string | null
   creado_en: string
   usuario: string | null
+  unidad: string | null
 }
 interface PriceHistory {
   id: number
   precio: number
+  precio_m2: number | null
   vigente_desde: string
   motivo: string | null
   usuario: string | null
+  unidad: string | null
 }
 interface Alert {
   id_insumo: number
@@ -59,7 +73,7 @@ async function errorMessage(res: Response) {
   return `${body.message || "No se pudo completar la operación"}${details}`
 }
 
-export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: number }) {
+export default function InventoryOperations({ refreshKey = 0, onChanged }: { refreshKey?: number; onChanged?: () => void }) {
   const [supplies, setSupplies] = useState<Supply[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [scraps, setScraps] = useState<Scrap[]>([])
@@ -68,12 +82,19 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
   const [selectedId, setSelectedId] = useState("")
   const [tipo, setTipo] = useState<"entrada" | "ajuste">("entrada")
   const [cantidad, setCantidad] = useState("")
+  const [cantidadPiezas, setCantidadPiezas] = useState("")
   const [referencia, setReferencia] = useState("")
   const [notas, setNotas] = useState("")
   const [minimo, setMinimo] = useState("")
   const [porcentaje, setPorcentaje] = useState("")
   const [motivo, setMotivo] = useState("")
   const [preciosCsv, setPreciosCsv] = useState("")
+  const [telasCsv, setTelasCsv] = useState("")
+  const [anchoTela, setAnchoTela] = useState("")
+  const [largoRollo, setLargoRollo] = useState("")
+  const [unidadCompra, setUnidadCompra] = useState("")
+  const [factorCompra, setFactorCompra] = useState("")
+  const [cantidadCompra, setCantidadCompra] = useState("")
   const [reservaRef, setReservaRef] = useState("")
   const [error, setError] = useState("")
   const [info, setInfo] = useState("")
@@ -81,6 +102,13 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
   const [canWrite, setCanWrite] = useState(false)
   const [canManage, setCanManage] = useState(false)
   const selected = supplies.find((s) => String(s.id) === selectedId)
+
+  useEffect(() => {
+    setAnchoTela(selected?.widthCm ? String(selected.widthCm) : "")
+    setLargoRollo(selected?.largo_pieza_cm ? String(selected.largo_pieza_cm) : "")
+    setUnidadCompra(selected?.unidad_compra || "")
+    setFactorCompra(selected?.factor_conversion != null ? String(selected.factor_conversion) : "")
+  }, [selectedId])
 
   useEffect(() => {
     const session = getSession()
@@ -110,15 +138,15 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
 
   const cargarDetalle = useCallback(async () => {
     if (!selectedId) return
-    const [movementRes, priceRes] = await Promise.all([
-      apiFetch(`/api/inventory/${selectedId}/movements?limit=20`),
-      apiFetch(`/api/inventory/${selectedId}/prices`),
-    ])
+    const movementRes = await apiFetch(`/api/inventory/${selectedId}/movements?limit=20`)
     if (!movementRes.ok) throw new Error(await errorMessage(movementRes))
-    if (!priceRes.ok) throw new Error(await errorMessage(priceRes))
     setMovements(await movementRes.json())
-    setPrices(await priceRes.json())
-  }, [selectedId])
+    if (canManage) {
+      const priceRes = await apiFetch(`/api/inventory/${selectedId}/prices`)
+      if (!priceRes.ok) throw new Error(await errorMessage(priceRes))
+      setPrices(await priceRes.json())
+    }
+  }, [selectedId, canManage])
 
   useEffect(() => {
     cargarDetalle().catch((e) => setError(e instanceof Error ? e.message : "Error al cargar historial"))
@@ -131,6 +159,7 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
     try {
       setInfo(await fn())
       await Promise.all([cargar(), cargarDetalle()])
+      onChanged?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error inesperado")
     } finally {
@@ -160,13 +189,36 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
     return "Stock mínimo actualizado."
   })
 
+  const ingresarPiezas = () => ejecutar(async () => {
+    const res = await apiFetch(`/api/inventory/${selectedId}/pieces`, {
+      method: "POST", body: JSON.stringify({ cantidad: Number(cantidadPiezas), referencia: referencia || null }),
+    })
+
+    if (!res.ok) throw new Error(await errorMessage(res))
+    setCantidadPiezas("")
+    return "Piezas físicas ingresadas."
+  })
+
+  const ingresarCompra = () => ejecutar(async () => {
+    const res = await apiFetch(`/api/inventory/${selectedId}/purchases`, {
+      method: "POST", body: JSON.stringify({ cantidad: cantidadCompra, referencia: referencia || null }),
+    })
+    if (!res.ok) throw new Error(await errorMessage(res))
+    setCantidadCompra("")
+    return "Compra ingresada y convertida a la unidad de stock."
+  })
+
   const actualizarPrecios = (modo: "porcentaje" | "lista") => ejecutar(async () => {
     const body = modo === "porcentaje"
       ? { porcentaje: Number(porcentaje), motivo: motivo || null }
       : {
-          items: preciosCsv.split(/\r?\n/).filter(Boolean).map((line) => {
-            const [id, precio] = line.split(";").map((v) => v.trim())
-            return { id_insumo: Number(id), precio: Number(precio) }
+          items: preciosCsv.split(/\r?\n/).filter((line) => line.trim()).map((line, index) => {
+            const columns = line.split(";").map((v) => v.trim())
+            const [id, precio] = columns
+            if (columns.length !== 2 || !/^[1-9]\d*$/.test(id) || !/^\d+(?:[.,]\d+)?$/.test(precio)) {
+              throw new Error(`Línea ${index + 1}: indicá id;precio válidos`)
+            }
+            return { id_insumo: Number(id), precio: Number(precio.replace(",", ".")) }
           }),
           motivo: motivo || "Lista de proveedor",
         }
@@ -174,6 +226,27 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
     if (!res.ok) throw new Error(await errorMessage(res))
     const data = await res.json()
     return `Precios actualizados: ${data.actualizados}. Los cálculos siguientes usarán esos valores.`
+  })
+
+  const configurarTela = () => ejecutar(async () => {
+    const res = await apiFetch(`/api/inventory/${selectedId}/fabric`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        ancho_cm: Number(anchoTela), largo_pieza_cm: largoRollo ? Number(largoRollo) : null,
+        unidad_compra: unidadCompra || null, factor_conversion: factorCompra || null,
+      }),
+    })
+    if (!res.ok) throw new Error(await errorMessage(res))
+    return "Tela configurada; el stock y el precio base deben estar en metros lineales."
+  })
+
+  const importarTelas = (aplicar: boolean) => ejecutar(async () => {
+    const res = await apiFetch("/api/inventory/prices/fabrics/import", {
+      method: "POST", body: JSON.stringify({ csv: telasCsv, aplicar, motivo: motivo || null }),
+    })
+    if (!res.ok) throw new Error(await errorMessage(res))
+    const data = await res.json()
+    return aplicar ? `Lista aplicada: ${data.actualizados} precios actualizados.` : `Lista válida: ${data.filas} filas. Podés aplicarla.`
   })
 
   const reservar = (scrapId: number) => ejecutar(async () => {
@@ -193,7 +266,7 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
   return (
     <section className="space-y-5 rounded-2xl border border-[#c9a961]/20 bg-[#111111] p-5">
       <div>
-        <h2 className="font-serif text-xl text-[#c9a961]">Control de stock y costos</h2>
+        <h2 className="font-serif text-xl text-[#c9a961]">Control de stock{canManage && " y costos"}</h2>
         <p className="mt-1 text-xs text-[#6b6560]">
           Cada entrada, ajuste y consumo de producción queda en el historial del insumo.
         </p>
@@ -208,14 +281,36 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
             setSelectedId(e.target.value)
             setMinimo("")
           }}>
-            {supplies.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.metersLeft} {s.unit}</option>)}
+            {supplies.map((s) => {
+              const stock = linearDisplay(s.metersLeft, 0, s.unit)
+              return <option key={s.id} value={s.id}>ID {s.id} · {s.name} · {displayNumber(stock.quantity, stock.unit === "metro" ? 2 : 0)} {stock.unit === "metro" ? "m" : stock.unit}</option>
+            })}
           </select>
           {selected && (
             <p className="text-xs text-[#6b6560]">
-              Saldo: {selected.metersLeft} {selected.unit} · mínimo: {selected.stock_minimo} {selected.unit}
+              Saldo: {displayNumber(linearDisplay(selected.metersLeft, 0, selected.unit).quantity, selected.unit === "cm" || selected.unit === "metro" ? 2 : 0)} {selected.unit === "cm" || selected.unit === "metro" ? "m" : selected.unit}
+              {" · "}mínimo: {displayNumber(linearDisplay(selected.stock_minimo, 0, selected.unit).quantity, selected.unit === "cm" || selected.unit === "metro" ? 2 : 0)} {selected.unit === "cm" || selected.unit === "metro" ? "m" : selected.unit}
+              {selected.unit === "cm" && " · operaciones y valores ingresados en cm"}
             </p>
           )}
-          {canWrite && (
+          {canWrite && selected?.perfil_en_receta && (
+            <div className="space-y-2">
+              <p className="text-xs text-[#6b6560]">Ingresá barras completas de {selected.largo_pieza_cm} cm. Los saldos deben estar conciliados.</p>
+              <input className={field} type="number" min="1" step="1" value={cantidadPiezas} placeholder="Cantidad de barras"
+                onChange={e => setCantidadPiezas(e.target.value)} />
+              <input className={field} value={referencia} placeholder="Referencia de compra" onChange={e => setReferencia(e.target.value)} />
+              <button className={button} disabled={busy || !cantidadPiezas} onClick={ingresarPiezas}>INGRESAR PIEZAS</button>
+            </div>
+          )}
+          {canManage && selected?.perfil_en_receta && (
+            <ProfileReconciliation key={selected.id} id={selected.id} largo={selected.largo_pieza_cm}
+              onChanged={() => { void Promise.all([cargar(), cargarDetalle()]).catch((e) => setError(e instanceof Error ? e.message : "Error al actualizar")); onChanged?.() }} />
+          )}
+          {canManage && selected && !selected.perfil_en_receta && (
+            <StockReconciliation key={selected.id} id={selected.id}
+              onChanged={() => { void Promise.all([cargar(), cargarDetalle()]).catch((e) => setError(e instanceof Error ? e.message : "Error al actualizar")); onChanged?.() }} />
+          )}
+          {canWrite && !selected?.perfil_en_receta && (
             <div className="grid gap-2 sm:grid-cols-2">
               <select className={field} value={tipo} onChange={(e) => setTipo(e.target.value as "entrada" | "ajuste")}>
                 <option value="entrada">Entrada (cantidad positiva)</option>
@@ -231,6 +326,14 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
                 onClick={registrarMovimiento}>REGISTRAR MOVIMIENTO</button>
             </div>
           )}
+          {canWrite && selected?.unidad_compra && !selected.perfil_en_receta && (
+            <div className="space-y-2 border-t border-[#2a2520] pt-3">
+              <p className="text-xs text-[#6b6560]">Compra: 1 {selected.unidad_compra} = {selected.factor_conversion} {selected.unit}</p>
+              <input className={field} type="number" min="0" step="any" value={cantidadCompra}
+                placeholder={`Cantidad de ${selected.unidad_compra}`} onChange={e => setCantidadCompra(e.target.value)} />
+              <button className={outline} disabled={busy || !cantidadCompra} onClick={ingresarCompra}>REGISTRAR COMPRA</button>
+            </div>
+          )}
           {canManage && selected && (
             <div className="flex flex-wrap gap-2 border-t border-[#2a2520] pt-3">
               <input className={`${field} min-w-40 flex-1`} type="number" min="0" step="any"
@@ -241,6 +344,17 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
               </button>
             </div>
           )}
+          {canManage && selected && selected.unit === "metro" && (
+            <div className="space-y-2 border-t border-[#2a2520] pt-3">
+              <h4 className="text-xs font-semibold text-[#f5f0e8]">Configurar tela para roller y tradicional</h4>
+              <p className="text-xs text-[#6b6560]">El precio y el stock existentes deben estar expresados por metro lineal.</p>
+              <input className={field} type="number" min="0" step="any" value={anchoTela} placeholder={`Ancho del rollo (cm; actual ${selected.widthCm})`} onChange={e => setAnchoTela(e.target.value)} />
+              <input className={field} type="number" min="0" step="any" value={largoRollo} placeholder="Largo del rollo (cm), opcional" onChange={e => setLargoRollo(e.target.value)} />
+              <input className={field} value={unidadCompra} placeholder="Unidad de compra (ej. rollo)" onChange={e => setUnidadCompra(e.target.value)} />
+              <input className={field} type="number" min="0" step="any" value={factorCompra} placeholder="Metros lineales por unidad de compra" onChange={e => setFactorCompra(e.target.value)} />
+              <button className={outline} disabled={busy || !anchoTela} onClick={configurarTela}>GUARDAR CONFIGURACIÓN DE TELA</button>
+            </div>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -249,17 +363,24 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
             <p className="text-xs text-[#6b6560]">No hay insumos debajo del mínimo configurado.</p>
           ) : (
             <ul className="space-y-2">
-              {alerts.map((a) => (
+              {alerts.map((a) => {
+                const actual = linearDisplay(a.stock_actual, 0, a.unidad)
+                const minimo = linearDisplay(a.stock_minimo, 0, a.unidad)
+                const faltante = linearDisplay(a.faltante, 0, a.unidad)
+                const unidad = actual.unit === "metro" ? "m" : actual.unit
+                const decimals = actual.unit === "metro" ? 2 : 0
+                return (
                 <li key={a.id_insumo} className="flex justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 text-xs">
                   <span className="text-[#f5f0e8]">{a.insumo}</span>
-                  <span className="text-amber-300">{a.stock_actual}/{a.stock_minimo} {a.unidad} · faltan {a.faltante}</span>
+                  <span className="text-amber-300">{displayNumber(actual.quantity, decimals)}/{displayNumber(minimo.quantity, decimals)} {unidad} · faltan {displayNumber(faltante.quantity, decimals)}</span>
                 </li>
-              ))}
+              )})}
             </ul>
           )}
           {canManage && (
             <div className="space-y-2 border-t border-[#2a2520] pt-3">
               <h4 className="text-xs font-semibold text-[#f5f0e8]">Actualizar precios</h4>
+              <PriceSyncStatus canManage={canManage} onSynced={() => { void cargar(); onChanged?.() }} />
               <div className="flex gap-2">
                 <input className={field} type="number" step="0.01" value={porcentaje} placeholder="Inflación / ajuste %"
                   onChange={(e) => setPorcentaje(e.target.value)} />
@@ -269,10 +390,25 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
               <textarea className={`${field} h-16 font-mono`} value={preciosCsv}
                 placeholder={"Lista proveedor: un insumo por línea, id;precio\n12;1540.50"}
                 onChange={(e) => setPreciosCsv(e.target.value)} />
+              <p className="text-xs text-[#6b6560]">La lista general usa el precio por unidad de registro de cada insumo (por cm si está registrado en cm). Para telas usá el CSV por metro lineal.</p>
               <input className={field} value={motivo} placeholder="Motivo / proveedor"
                 onChange={(e) => setMotivo(e.target.value)} />
               <button className={outline} disabled={busy || !preciosCsv.trim()}
                 onClick={() => actualizarPrecios("lista")}>APLICAR LISTA DE PRECIOS</button>
+              <textarea className={`${field} h-24 font-mono`} value={telasCsv}
+                placeholder={"CSV de telas separado por ;\nid_insumo;precio_metro\n12;1500"}
+                onChange={(e) => setTelasCsv(e.target.value)} />
+              <input className={field} type="file" accept=".csv,text/csv"
+                onChange={async (e) => {
+                  const archivo = e.target.files?.[0]
+                  if (!archivo) return
+                  try { setTelasCsv(await archivo.text()) }
+                  catch { setError("No se pudo leer el archivo CSV") }
+                }} />
+              <div className="flex gap-2">
+                <button className={outline} disabled={busy || !telasCsv.trim()} onClick={() => importarTelas(false)}>VALIDAR CSV TELAS</button>
+                <button className={outline} disabled={busy || !telasCsv.trim()} onClick={() => importarTelas(true)}>APLICAR CSV TELAS</button>
+              </div>
             </div>
           )}
         </div>
@@ -285,27 +421,29 @@ export default function InventoryOperations({ refreshKey = 0 }: { refreshKey?: n
             {movements.map((m) => (
               <div key={m.id} className="flex justify-between gap-3 border-b border-[#2a2520] p-2 text-[11px]">
                 <span className="text-[#f5f0e8]">{m.tipo} {m.referencia && `· ${m.referencia}`}
+                  {m.notas && <span className="block break-all text-[#aaa39a]">{m.notas}</span>}
                   <span className="block text-[#6b6560]">{new Date(`${m.creado_en}Z`).toLocaleString("es-AR")} · {m.usuario || "sistema"}</span>
                 </span>
-                <span className="whitespace-nowrap text-[#c9a961]">{m.cantidad > 0 ? "+" : ""}{m.cantidad} → {m.stock_resultante}</span>
+                <span className="whitespace-nowrap text-[#c9a961]">{m.cantidad > 0 ? "+" : ""}{m.cantidad} → {m.stock_resultante} {m.unidad || selected?.unit}</span>
               </div>
             ))}
             {movements.length === 0 && <p className="p-3 text-xs text-[#6b6560]">Sin movimientos.</p>}
           </div>
         </div>
-        <div className="space-y-2">
+        {canManage && <div className="space-y-2">
           <h3 className="text-sm font-bold text-[#f5f0e8]">Historial de precios {selected ? `· ${selected.name}` : ""}</h3>
           <div className="max-h-56 overflow-auto rounded-lg border border-[#2a2520]">
             {prices.map((p) => (
               <div key={p.id} className="flex justify-between gap-3 border-b border-[#2a2520] p-2 text-[11px]">
-                <span className="text-[#f5f0e8]">${p.precio.toLocaleString("es-AR")} · {p.motivo || "Cambio de precio"}
+                <span className="text-[#f5f0e8]">${p.precio.toLocaleString("es-AR")} / {p.unidad || selected?.unit || "unidad"}
+                  {p.precio_m2 != null && ` · $${p.precio_m2.toLocaleString("es-AR")} / m²`} · {p.motivo || "Cambio de precio"}
                   <span className="block text-[#6b6560]">{new Date(`${p.vigente_desde}Z`).toLocaleString("es-AR")} · {p.usuario || "sistema"}</span>
                 </span>
               </div>
             ))}
             {prices.length === 0 && <p className="p-3 text-xs text-[#6b6560]">Sin historial.</p>}
           </div>
-        </div>
+        </div>}
       </div>
 
       <div className="space-y-3 border-t border-[#2a2520] pt-4">

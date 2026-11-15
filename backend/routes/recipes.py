@@ -4,10 +4,14 @@ import container
 from exceptions import ValidationFailed
 from schemas.common import parse_payload
 from schemas.recipes import (
-    MAX_MEDIDA_CM, DuplicateIn, ImportIn, MedidasIn, PreviewIn, ProductIn, RecipeVersionIn,
+    MAX_MEDIDA_CM, CotizacionIn, CotizacionMedidasIn, DuplicateIn, GuardarPresupuestoIn, ImportIn, MedidasIn, PreviewIn,
+    ProductIn, RecipeVersionIn,
 )
 from security.decorators import permission_required
-from security.permissions import RECIPES_PRODUCE, RECIPES_READ, RECIPES_WRITE
+from security.permissions import QUOTES_READ, RECIPES_PRODUCE, RECIPES_READ, RECIPES_WRITE
+from security.price_visibility import (
+    cotizacion_visible, explosion_visible, historial_produccion_visible, presupuesto_visible, produccion_visible,
+)
 from services import recipe_import
 
 recipes_bp = Blueprint('recipes', __name__)
@@ -54,7 +58,57 @@ def explosion(product_id):
         product_id, medidas.w, medidas.h,
         opciones=_opciones(request.args.to_dict()), fecha=medidas.fecha, version=medidas.version,
         referencia=medidas.referencia)
-    return jsonify(resultado.model_dump())
+    return jsonify(explosion_visible(resultado.model_dump()))
+
+
+@recipes_bp.route('/recipes/<int:product_id>/quote', methods=['GET'])
+@permission_required(QUOTES_READ)
+def recipe_quote(product_id):
+    args = request.args.to_dict()
+    if 'markup_pct' in args:
+        raise ValidationFailed("El markup es fijo: 100%")
+    datos = parse_payload(CotizacionMedidasIn, args)
+    opciones = _opciones({k: v for k, v in args.items() if k != 'km_obra'})
+    resultado = container.recipe_service().quote_product(
+        product_id, datos.w, datos.h, datos.km_obra,
+        opciones=opciones,
+        fecha=datos.fecha, version=datos.version,
+        referencia=datos.referencia)
+    from services.saved_quotes import token_presupuesto
+    salida = resultado.model_dump(mode='json')
+    token = token_presupuesto(product_id, datos, opciones, salida)
+    visible = cotizacion_visible(salida)
+    visible['guardado_token'] = token
+    return jsonify(visible)
+
+
+@recipes_bp.route('/quotes/saved', methods=['POST'])
+@permission_required(QUOTES_READ)
+def save_quote():
+    from services.saved_quotes import guardar_presupuesto
+    datos = parse_payload(GuardarPresupuestoIn, request.get_json(silent=True))
+    return jsonify(presupuesto_visible(guardar_presupuesto(datos.token))), 201
+
+
+@recipes_bp.route('/quotes/saved', methods=['GET'])
+@permission_required(QUOTES_READ)
+def saved_quotes():
+    from services.saved_quotes import presupuestos_recientes
+    return jsonify([presupuesto_visible(p) for p in presupuestos_recientes()])
+
+
+@recipes_bp.route('/quotes/calculate', methods=['POST'])
+@permission_required(QUOTES_READ)
+def calculate_quote():
+    datos = parse_payload(CotizacionIn, request.get_json(silent=True))
+    resultado = container.recipe_service().quote_by_id(
+        datos.receta_id, datos.ancho, datos.alto, datos.km_obra,
+        opciones=_opciones(datos.opciones), referencia=datos.referencia)
+    return jsonify({
+        'status': 'success', 'receta_id': datos.receta_id,
+        'medidas': {'ancho_cm': datos.ancho, 'alto_cm': datos.alto},
+        'resultado': cotizacion_visible(resultado.model_dump()),
+    })
 
 
 @recipes_bp.route('/recipes/<int:product_id>/produce', methods=['POST'])
@@ -67,7 +121,7 @@ def produce(product_id):
     opciones = cuerpo.get('opciones') if isinstance(cuerpo.get('opciones'), dict) else {}
     resultado = container.recipe_service().produce(
         product_id, medidas.w, medidas.h, _opciones(opciones), medidas.referencia)
-    return jsonify(resultado.model_dump())
+    return jsonify(produccion_visible(resultado.model_dump()))
 
 
 @recipes_bp.route('/recipes/<int:product_id>', methods=['GET'])
@@ -81,6 +135,19 @@ def get_recipe_base(product_id):
 @permission_required(RECIPES_READ)
 def calculation_types():
     return jsonify(container.recipe_service().calculation_types())
+
+
+@recipes_bp.route('/recipes/productions', methods=['GET'])
+@permission_required(RECIPES_READ)
+def production_history():
+    product_id = request.args.get('producto_id', type=int)
+    if request.args.get('producto_id') and product_id is None:
+        raise ValidationFailed("producto_id debe ser un entero")
+    limit = request.args.get('limit', default=100, type=int)
+    offset = request.args.get('offset', default=0, type=int)
+    referencia = request.args.get('referencia', type=str)
+    rows = container.recipe_service().production_history(product_id, referencia, limit, offset)
+    return jsonify([historial_produccion_visible(r.model_dump(mode='json')) for r in rows])
 
 
 @recipes_bp.route('/recipes/<int:product_id>/versions', methods=['GET'])

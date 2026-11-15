@@ -58,4 +58,12 @@ class Config:
     # Producción: sobrante mínimo de un perfil para guardarlo como retazo y costo de la mano de obra
     MIN_RETAZO_PERFIL_CM = float(os.environ.get('MIN_RETAZO_PERFIL_CM', 95))
     MIN_RETAZO_TELA_CM = float(os.environ.get('MIN_RETAZO_TELA_CM', 80))
-    COSTO_MINUTO_MANO_OBRA = float(os.environ.get('COSTO_MINUTO_MANO_OBRA', 0))
+    COSTO_MINUTO_MANO_OBRA = float(os.environ.get('COSTO_MINUTO_MANO_OBRA', 133))
+    COSTO_DESGASTE_MAQUINARIA = os.environ.get('COSTO_DESGASTE_MAQUINARIA', '2000')
+    TARIFA_BASE_COLOCACION = os.environ.get('TARIFA_BASE_COLOCACION', '8000')
+    COSTO_POR_KM = os.environ.get('COSTO_POR_KM', '450')
+
+    GOOGLE_SHEETS_ID = os.environ.get('GOOGLE_SHEETS_ID')
+    GOOGLE_SHEETS_TAB = os.environ.get('GOOGLE_SHEETS_TAB', 'PRODUCTOS_INVENTARIO')
+    GOOGLE_SHEETS_CREDENTIALS_JSON = os.environ.get('GOOGLE_SHEETS_CREDENTIALS_JSON')
+    GOOGLE_APPLICATION_CREDENTIALS = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')

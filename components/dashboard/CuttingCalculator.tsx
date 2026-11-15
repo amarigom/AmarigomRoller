@@ -1,34 +1,50 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Calculator, Scissors, Check, Loader2, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { apiFetch, getSession, hasPermission } from "@/lib/api"
-import type { ExplosionTotals, RecipeComponent, RecipeItem } from "@/lib/types/recipe"
+import type { ExplosionTotals, MaterialComponent, QuoteTotals, RecipeComponent, RecipeItem } from "@/lib/types/recipe"
+import { displayNumber, linearDisplay } from "@/lib/display-units"
 
 interface CuttingCalculatorProps {
   selectedProductId: number | null;
   recipe: RecipeItem[];
   onRefreshInventory: () => void;
+  priceRevision?: number;
+  onQuoteSaved?: () => void;
 }
 
+function tieneCostos(item: MaterialComponent): item is RecipeComponent {
+  return "precio_unitario" in item && typeof item.precio_unitario === "number"
+    && "costo_parcial" in item && typeof item.costo_parcial === "number"
+}
 
 export default function CuttingCalculator({ 
   selectedProductId, 
   recipe,
-  onRefreshInventory 
+  onRefreshInventory,
+  priceRevision = 0,
+  onQuoteSaved,
 }: CuttingCalculatorProps) {
   
   const [windowWidth, setWindowWidth] = useState("")
   const [windowHeight, setWindowHeight] = useState("")
   const [referencia, setReferencia] = useState("")
-  const [explosion, setExplosion] = useState<RecipeComponent[] | null>(null)
-  const [totals, setTotals] = useState<ExplosionTotals | null>(null)
+  const [kmObra, setKmObra] = useState("0")
+  const [explosion, setExplosion] = useState<MaterialComponent[] | null>(null)
+  const [totals, setTotals] = useState<QuoteTotals | ExplosionTotals | null>(null)
   const [loading, setLoading] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [producing, setProducing] = useState(false)
   const [produceError, setProduceError] = useState<string | null>(null)
+  const [quoteToken, setQuoteToken] = useState<string | null>(null)
+  const [savingQuote, setSavingQuote] = useState(false)
+  const [savedQuote, setSavedQuote] = useState<number | null>(null)
   const canProduce = hasPermission(getSession(), "recipes:produce")
+  const role = getSession()?.user.rol
+  const canQuote = role === "admin" || role === "ventas"
+  const canViewCosts = role === "admin"
 
   // Al cambiar medidas o producto hay que volver a confirmar
   useEffect(() => {
@@ -65,50 +81,78 @@ export default function CuttingCalculator({
     }
   }
 
-  // Acción: Calcular explosión basada únicamente en medidas e ID
-  const calcularReceta = async () => {
-    if (!windowWidth || !windowHeight || !selectedProductId) return;
-    setLoading(true)
+  const guardarPresupuesto = async () => {
+    if (!quoteToken) return
+    setSavingQuote(true)
+    setProduceError(null)
     try {
-      const params = new URLSearchParams({ w: windowWidth, h: windowHeight })
-      if (referencia) params.set("referencia", referencia)
-      const response = await apiFetch(`/api/test-recipe/${selectedProductId}?${params}`)
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        const detalle = Array.isArray(data.detalles) && data.detalles.length ? ` (${data.detalles.join("; ")})` : ""
-        throw new Error((data.message || "No se pudo calcular la receta") + detalle)
-      }
-      
-      if (data.status === "success") {
-        setProduceError(null)
-        setExplosion(data.explosion)
-        setTotals({
-          total_materiales: data.total_materiales ?? 0,
-          total_minutos: data.total_minutos ?? 0,
-          total_mano_obra: data.total_mano_obra ?? 0,
-          total: data.total ?? data.total_materiales ?? 0,
-        })
-      }
+      const response = await apiFetch("/api/quotes/saved", {
+        method: "POST", body: JSON.stringify({ token: quoteToken }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.message || "No se pudo guardar el presupuesto")
+      setSavedQuote(data.id)
+      onQuoteSaved?.()
     } catch (error) {
-      setExplosion(null)
-      setTotals(null)
-      setProduceError(error instanceof Error ? error.message : "Error al calcular la receta")
+      setProduceError(error instanceof Error ? error.message : "No se pudo guardar el presupuesto")
     } finally {
-      setLoading(false)
+      setSavingQuote(false)
     }
   }
 
-  // Debounce para evitar saturar Flask mientras escribís medidas
   useEffect(() => {
+    const controller = new AbortController()
+    setExplosion(null)
+    setTotals(null)
+    setQuoteToken(null)
+    setSavedQuote(null)
+    setProduceError(null)
+    if (!windowWidth || !windowHeight || !selectedProductId) {
+      setLoading(false)
+      return () => controller.abort()
+    }
+    if (!role) return () => controller.abort()
+    if (canQuote && !kmObra.trim()) {
+      setLoading(false)
+      setProduceError("Indicá la distancia de ida a la obra.")
+      return () => controller.abort()
+    }
+    setLoading(true)
     const timer = setTimeout(() => {
-      calcularReceta()
+      const calcularReceta = async () => {
+        try {
+          const params = new URLSearchParams({ w: windowWidth, h: windowHeight })
+          if (canQuote) params.set("km_obra", kmObra)
+          if (referencia) params.set("referencia", referencia)
+          const response = await apiFetch(`/api/recipes/${selectedProductId}/${canQuote ? "quote" : "explosion"}?${params}`, {
+            signal: controller.signal,
+          })
+          const data = await response.json()
+          if (!response.ok) {
+            const detalle = Array.isArray(data.detalles) && data.detalles.length ? ` (${data.detalles.join("; ")})` : ""
+            throw new Error((data.message || "No se pudo calcular la receta") + detalle)
+          }
+          if (controller.signal.aborted) return
+          setExplosion(data.explosion)
+          if (canQuote) {
+            setTotals(data)
+            setQuoteToken(data.guardado_token)
+          }
+        } catch (error) {
+          if (!controller.signal.aborted) {
+            setProduceError(error instanceof Error ? error.message : "Error al calcular la receta")
+          }
+        } finally {
+          if (!controller.signal.aborted) setLoading(false)
+        }
+      }
+      void calcularReceta()
     }, 600)
-    return () => clearTimeout(timer)
-  }, [windowWidth, windowHeight, selectedProductId, referencia])
-
-  const totalCost = useMemo(() => 
-    totals?.total ?? explosion?.reduce((acc, item) => acc + item.costo_parcial, 0) ?? 0
-  , [explosion, totals])
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [windowWidth, windowHeight, selectedProductId, referencia, kmObra, priceRevision, role, canQuote])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -151,12 +195,29 @@ export default function CuttingCalculator({
               placeholder="0.00"
             />
           </div>
+          {canQuote && <div className="space-y-1">
+            <label htmlFor="km-obra" className="text-[10px] text-[#6b6560] uppercase ml-1">Distancia de ida a la obra (km)</label>
+            <input
+              id="km-obra"
+              type="number"
+              min="0"
+              step="0.01"
+              value={kmObra}
+              onChange={(e) => setKmObra(e.target.value)}
+              className="w-full bg-black border border-[#2a2520] p-3 rounded-xl text-white outline-none focus:border-[#c9a961] transition-all"
+            />
+          </div>}
         </div>
 
         {produceError && <p className="text-sm text-red-400">{produceError}</p>}
         {!canProduce && (
           <p className="text-xs text-[#6b6560]">Tu rol no puede confirmar producciones.</p>
         )}
+
+        {canQuote && <button onClick={guardarPresupuesto} disabled={!quoteToken || loading || savingQuote || savedQuote !== null}
+          className="w-full rounded-xl border border-[#c9a961] py-3 text-sm text-[#c9a961] disabled:opacity-40">
+          {savingQuote ? "Guardando…" : savedQuote ? `Presupuesto #${savedQuote} guardado` : "Guardar presupuesto"}
+        </button>}
 
         <button
           onClick={confirmarProduccion}
@@ -201,7 +262,11 @@ export default function CuttingCalculator({
         
         <div className="flex-1 space-y-3 min-h-[250px]">
           {explosion ? (
-            explosion.map((item, index) => (
+            explosion.map((item, index) => {
+              const stock = linearDisplay(item.metodo === "RETAZO" ? 0 : item.consumo_m_o_m2, 0, item.unidad)
+              const priced = canViewCosts && tieneCostos(item) ? item : null
+              const costo = priced && linearDisplay(priced.cantidad_costo ?? (priced.metodo === "RETAZO" ? 0 : priced.consumo_m_o_m2), priced.precio_unitario, priced.unidad_costo ?? priced.unidad)
+              return (
               <div key={index} className="flex justify-between items-center p-3 bg-black/40 border border-[#2a2520] rounded-lg">
                 <div>
                   <p className="text-white text-sm font-bold">{item.componente}</p>
@@ -211,11 +276,15 @@ export default function CuttingCalculator({
                   {!!item.minutos && <p className="text-[10px] text-[#6b6560]">Mano de obra {item.minutos} min</p>}
                 </div>
                 <div className="text-right">
-                  <p className="text-[#c9a961] font-mono text-sm">{item.consumo_m_o_m2} {item.unidad}</p>
-                  <p className="text-[10px] text-[#6b6560] font-bold">${item.costo_parcial.toFixed(2)}</p>
+                  <p className="text-[#c9a961] font-mono text-sm">Stock rollo / insumo: {displayNumber(stock.quantity, stock.unit === "metro" ? 2 : 0)} {stock.unit === "metro" ? "m" : stock.unit}</p>
+                  {priced && costo && <>
+                    {item.metodo !== "MANO_OBRA" && <p className="text-[10px] text-[#6b6560]">Costo: {displayNumber(costo.quantity, costo.unit === "metro" ? 2 : 0)} {costo.unit === "metro" ? "m" : costo.unit} × ${displayNumber(costo.price, 2)} / {costo.unit === "metro" ? "m" : costo.unit}</p>}
+                    <p className="text-[10px] text-[#6b6560] font-bold">Costo real: ${priced.costo_parcial.toFixed(2)}</p>
+                    {!!priced.costo_reposicion && <p className="text-[10px] text-[#c9a961]">Referencia para venta: {displayNumber(priced.cantidad_reposicion ?? 0, 2)} m × ${displayNumber(priced.precio_unitario, 2)} / m = ${displayNumber(priced.costo_reposicion, 2)}</p>}
+                  </>}
                 </div>
               </div>
-            ))
+            )})
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-[#2a2520] border-2 border-dashed border-[#1a1a1a] rounded-xl p-10">
               <Calculator size={40} className="mb-2 opacity-10" />
@@ -224,18 +293,26 @@ export default function CuttingCalculator({
           )}
         </div>
 
-        {explosion && (
+        {explosion && totals && (
           <div className="mt-6 pt-4 border-t border-[#2a2520] flex justify-between items-end">
-            <div>
+            {canViewCosts && "total" in totals && <div>
               <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Costo Total</p>
-              <p className="text-2xl text-white font-serif">${totalCost.toLocaleString('es-AR')}</p>
-              {!!totals?.total_mano_obra && (
-                <p className="text-[10px] text-[#6b6560]">Incluye mano de obra: ${totals.total_mano_obra.toLocaleString('es-AR')} ({totals.total_minutos} min)</p>
-              )}
-            </div>
+              <p className="text-2xl text-white font-serif">${totals.total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-[10px] text-[#6b6560]">Materiales: ${totals.total_materiales.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-[10px] text-[#6b6560]">Mano de obra: ${totals.total_mano_obra.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({totals.total_minutos} min)</p>
+              <p className="text-[10px] text-[#6b6560]">Desgaste maquinaria: ${totals.total_desgaste.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            </div>}
             <div className="text-right">
-              <p className="text-[9px] text-[#6b6560] uppercase mb-1 font-bold">PVP Sugerido (40%)</p>
-              <p className="text-xl text-[#c9a961] font-bold">${(totalCost / 0.6).toLocaleString('es-AR', { maximumFractionDigits: 0 })}</p>
+              <p className="text-[9px] text-[#6b6560] uppercase mb-1 font-bold">Cortina{canViewCosts && "markup_pct" in totals.precio_producto && ` (markup ${totals.precio_producto.markup_pct}% sobre costo de referencia)`}</p>
+              <p className="text-xl text-[#c9a961] font-bold">${totals.precio_producto.precio_venta_final.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              {canViewCosts && "total" in totals && <>
+                <p className="text-[10px] text-[#6b6560]">Ganancia bruta: ${totals.precio_producto.ganancia_markup.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-[#6b6560]">Margen sobre ventas: {totals.precio_producto.margen_sobre_ventas_pct}%</p>
+                <p className="text-[10px] text-[#6b6560]">Colocación: ${totals.servicio_colocacion.tarifa_base.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-[10px] text-[#6b6560]">Traslado ({totals.servicio_colocacion.km_totales} km ida y vuelta): ${totals.servicio_colocacion.costo_traslado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </>}
+              {!canViewCosts && <p className="text-[10px] text-[#6b6560]">Colocación y traslado: ${totals.servicio_colocacion.total_colocacion.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>}
+              <p className="text-sm text-white font-bold">Total presupuesto: ${totals.total_presupuesto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
           </div>
         )}

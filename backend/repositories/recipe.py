@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
-from models import PiezaStock, Product, Receta, RecetaItem, RetazoTela
+from models import PiezaStock, ProductionRecord, Product, Receta, RecetaItem, RetazoTela
 from repositories.base import BaseRepository
 
 
@@ -35,6 +35,9 @@ class RecipeRepository(BaseRepository):
     def por_version(self, product_id, version):
         return self._con_items().filter_by(producto_id=product_id, version=version).first()
 
+    def por_id(self, recipe_id):
+        return self._con_items().filter_by(id=recipe_id).first()
+
     def versiones(self, product_id):
         return Receta.query.filter_by(producto_id=product_id).order_by(Receta.version.desc()).all()
 
@@ -57,6 +60,19 @@ class RecipeRepository(BaseRepository):
 
     def producto_por_nombre(self, nombre):
         return Product.query.filter(func.lower(Product.nombre) == nombre.strip().lower()).first()
+
+    def historial_producciones(self, product_id=None, referencia=None, limit=100, offset=0):
+        query = ProductionRecord.query
+        if product_id is not None:
+            query = query.filter(ProductionRecord.producto_id == product_id)
+        if referencia:
+            query = query.filter(ProductionRecord.referencia.ilike(f'%{referencia}%'))
+        return (
+            query.order_by(ProductionRecord.creado_en.desc(), ProductionRecord.id.desc())
+            .limit(min(max(limit, 1), 500))
+            .offset(max(offset, 0))
+            .all()
+        )
 
 
 class ScrapRepository(BaseRepository):
@@ -99,6 +115,13 @@ class ScrapRepository(BaseRepository):
 class PieceRepository(BaseRepository):
     model = PiezaStock
 
+    def lock_by_supply(self, supply_ids):
+        if not supply_ids:
+            return []
+        return (PiezaStock.query.filter(PiezaStock.id_insumo.in_(supply_ids),
+                                       PiezaStock.longitud_actual_cm > 0)
+                .order_by(PiezaStock.id_insumo, PiezaStock.id).populate_existing().with_for_update().all())
+
     def remnants_by_supply(self, supply_ids):
         """Sobrantes de perfil aún utilizables, agrupados por insumo."""
         if not supply_ids:
@@ -120,5 +143,5 @@ class PieceRepository(BaseRepository):
             PiezaStock.id.in_(piece_ids),
             PiezaStock.es_retazo.is_(True),
             PiezaStock.longitud_actual_cm > 0,
-        ).with_for_update().all()
+        ).populate_existing().with_for_update().all()
         return {r.id: r for r in rows}

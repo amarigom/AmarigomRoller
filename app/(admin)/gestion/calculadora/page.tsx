@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react"
 import CuttingCalculator from "@/components/dashboard/CuttingCalculator"
+import ProductionHistory from "@/components/dashboard/ProductionHistory"
+import PriceSyncStatus from "@/components/dashboard/PriceSyncStatus"
+import SavedQuotes from "@/components/dashboard/SavedQuotes"
 import type { Product } from "@/lib/types/product"
 import type { RecipeItem } from "@/lib/types/recipe"
 import { mapBackendToRecipe } from "@/lib/mappers" 
-import { apiFetch } from "@/lib/api"
+import { apiFetch, getSession } from "@/lib/api"
 
 export default function CalculadoraPage() {
   const [productList, setProductList] = useState<Product[]>([])
@@ -13,6 +16,10 @@ export default function CalculadoraPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [recipeError, setRecipeError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [productionRevision, setProductionRevision] = useState(0)
+  const [priceRevision, setPriceRevision] = useState(0)
+  const [quoteRevision, setQuoteRevision] = useState(0)
+  const canQuote = getSession()?.user.rol === "admin" || getSession()?.user.rol === "ventas"
 
   // Carga inicial de productos
   useEffect(() => {
@@ -91,11 +98,16 @@ export default function CalculadoraPage() {
       )}
 
       {/* EL COMPONENTE (Puro y Mudo) */}
+      {canQuote && <PriceSyncStatus onSynced={() => setPriceRevision((revision) => revision + 1)} />}
       <CuttingCalculator 
         selectedProductId={selectedId}
         recipe={recipe} 
-        onRefreshInventory={() => { /* Lógica para refrescar stock si es necesario */ }}
+        onRefreshInventory={() => setProductionRevision((revision) => revision + 1)}
+        priceRevision={priceRevision}
+        onQuoteSaved={() => setQuoteRevision((revision) => revision + 1)}
       />
+      {canQuote && <SavedQuotes refreshKey={quoteRevision} />}
+      <ProductionHistory refreshKey={productionRevision} />
     </div>
   )
 }

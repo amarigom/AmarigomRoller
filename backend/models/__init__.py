@@ -8,8 +8,12 @@ from .recipe import Receta, RecetaItem
 from .client import Cliente
 from .user import User, Role
 from .inventory import InventoryMovement, SupplyPriceHistory
+from .production import ProductionRecord
+from .price_sync import PriceSyncState
+from .saved_quote import SavedQuote
 
 __all__ = [
     'db', 'Supply', 'SupplyCategory', 'Receta', 'RecetaItem', 'RetazoTela', 'PiezaStock',
-    'Product', 'Cliente', 'User', 'Role', 'InventoryMovement', 'SupplyPriceHistory',
+    'Product', 'Cliente', 'User', 'Role', 'InventoryMovement', 'SupplyPriceHistory', 'ProductionRecord',
+    'PriceSyncState', 'SavedQuote',
 ]

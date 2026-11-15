@@ -1,20 +1,22 @@
 from datetime import date, datetime, time
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from types import SimpleNamespace
 
 from flask import current_app, g
 
 from exceptions import ConflictError, NotFoundError, ValidationFailed
-from models import InventoryMovement, PiezaStock, Product, Receta, RecetaItem, RetazoTela
+from models import InventoryMovement, PiezaStock, ProductionRecord, Product, Receta, RecetaItem, RetazoTela
 from repositories.inventory import InventoryRepository
 from repositories.recipe import PieceRepository, RecipeRepository, ScrapRepository, ahora
 from repositories.supply import SupplyRepository
 from schemas.recipes import (
-    ExplosionItemOut, ExplosionOut, ProduccionOut, ProductIn, ProductRecipeOut, RecipeItemFullOut, RecipeItemIn,
-    RecipeItemOut, RecipeVersionIn, RecipeVersionOut, StockDescontadoOut,
+    CotizacionOut, ExplosionItemOut, ExplosionOut, ProductionHistoryOut, ProduccionOut, ProductIn, ProductRecipeOut,
+    RecipeItemFullOut, RecipeItemIn, RecipeItemOut, RecipeVersionIn, RecipeVersionOut, StockDescontadoOut,
 )
 from services import recipe_import
 from services.costeo import calcular_explosion
+from services.pricing import calcular_cotizacion
+from services.production_costs import ETIQUETA_SKU
 from strategies import formulas
 from strategies.costing import MIN_RETAZO_PERFIL_CM, STRATEGIES, usa_perfiles
 from strategies.units import PieceUnit, get_unit_strategy
@@ -55,12 +57,29 @@ class RecipeService:
             for tipo, s in sorted(STRATEGIES.items())
         ]
 
+    def production_history(self, product_id=None, referencia=None, limit=100, offset=0):
+        if product_id is not None and self.recipes.session.get(Product, product_id) is None:
+            raise NotFoundError(f"El producto {product_id} no existe")
+        rows = self.recipes.historial_producciones(product_id, referencia, limit, offset)
+        return [ProductionHistoryOut.from_model(r) for r in rows]
+
     def _calcular(self, product_id, w, h, opciones=None, fecha=None, version=None, referencia=None):
         receta = self._receta(product_id, fecha, version)
         resultado, total = self._calcular_items(receta.items, w, h, opciones, referencia)
         return receta, resultado, total
 
     def _calcular_items(self, componentes, w, h, opciones=None, referencia=None):
+        etiqueta = self.supplies.by_sku(ETIQUETA_SKU)
+        if etiqueta is None or not etiqueta.activo:
+            raise ValidationFailed("Falta el insumo obligatorio Etiqueta; aplicá las migraciones o reactivá el insumo")
+        if any(c.id_insumo == etiqueta.id for c in componentes):
+            raise ValidationFailed("La etiqueta se agrega automáticamente; quitála de los componentes de la receta")
+        etiqueta_item = SimpleNamespace(
+            id_insumo=etiqueta.id, insumo=etiqueta, nombre=etiqueta.name, tipo_calculo='fijo',
+            delta_ancho_cm=0, delta_alto_cm=0, cantidad_base=1, merma_pct=0, minutos_mano_obra=0,
+            insumos_alternativos=[],
+        )
+        componentes = list(componentes) + [etiqueta_item]
         ids_insumo = {c.id_insumo for c in componentes if c.id_insumo}
         ids_perfil = {c.id_insumo for c in componentes if c.id_insumo and usa_perfiles(c.tipo_calculo)}
         ids_alt = {
@@ -85,16 +104,41 @@ class RecipeService:
         receta, resultado, total = self._calcular(product_id, w, h, opciones, fecha, version, referencia)
         return self._explosion_out(receta.version, resultado, total)
 
+    def quote(self, receta, w, h, km_obra, opciones=None, referencia=None):
+        resultado, total = self._calcular_items(receta.items, w, h, opciones, referencia)
+        explosion = self._explosion_out(receta.version, resultado, total)
+        return CotizacionOut(**explosion.model_dump(), receta_id=receta.id,
+                             **calcular_cotizacion(explosion, km_obra))
+
+    def quote_by_id(self, recipe_id, w, h, km_obra, opciones=None, referencia=None):
+        receta = self.recipes.por_id(recipe_id)
+        if receta is None or not receta.items:
+            raise NotFoundError(f"La receta {recipe_id} no existe o no tiene componentes")
+        return self.quote(receta, w, h, km_obra, opciones, referencia)
+
+    def quote_product(self, product_id, w, h, km_obra, opciones=None, fecha=None, version=None, referencia=None):
+        receta = self._receta(product_id, fecha, version)
+        return self.quote(receta, w, h, km_obra, opciones, referencia)
+
     def _explosion_out(self, version, resultado, total):
         minutos, mano_obra = self._mano_obra(resultado)
+        desgaste = self._desgaste()
         return ExplosionOut(
             version=version,
             explosion=[ExplosionItemOut(**r) for r in resultado],
             total_materiales=total,
             total_minutos=minutos,
             total_mano_obra=mano_obra,
-            total=round(total + mano_obra, 2),
+            total_desgaste=desgaste,
+            total=round(total + mano_obra + desgaste, 2),
         )
+
+    @staticmethod
+    def _desgaste():
+        desgaste = Decimal(str(current_app.config['COSTO_DESGASTE_MAQUINARIA']))
+        if not desgaste.is_finite() or desgaste < 0:
+            raise ValueError("El costo por desgaste debe ser finito y no negativo")
+        return float(desgaste.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
     # --- Herramientas de edición -----------------------------------------------------------
 
@@ -149,17 +193,26 @@ class RecipeService:
         origen = self.recipes.por_version(product_id, datos.version) if datos.version else self.recipes.vigente(product_id)
         if origen is None:
             raise NotFoundError("No hay una receta para duplicar")
-        producto = self.create_product(ProductIn(nombre=datos.nombre, categoria=origen.producto.categoria))
         items = [RecipeItemIn(**{k: getattr(i, k) for k in RecipeItemIn.model_fields}) for i in origen.items]
+        self._validar_items(items)
+        if self.recipes.producto_por_nombre(datos.nombre) is not None:
+            raise ConflictError(f"Ya existe un producto llamado '{datos.nombre}'")
+        producto = Product(nombre=datos.nombre.strip(), categoria=origen.producto.categoria, activo=True)
+        self.recipes.session.add(producto)
+        self.recipes.session.flush()
         version = self.publish_version(
-            producto.id, RecipeVersionIn(items=items, nota=f"Copia de {origen.producto.nombre} v{origen.version}"))
-        return producto, version
+            producto.id, RecipeVersionIn(items=items, nota=f"Copia de {origen.producto.nombre} v{origen.version}"),
+            commit=False)
+        self.recipes.commit()
+        return ProductRecipeOut(id=producto.id, nombre=producto.nombre, categoria=producto.categoria,
+                                version_vigente=version.version, items=len(items)), version
 
     # --- Versionado ------------------------------------------------------------------------
 
     def publish_version(self, product_id, datos, commit=True):
         """Crea una versión nueva y cierra la vigente: los cálculos con fecha anterior no cambian."""
-        if self.recipes.session.get(Product, product_id) is None:
+        producto = Product.query.filter_by(id=product_id).populate_existing().with_for_update().first()
+        if producto is None:
             raise NotFoundError(f"El producto {product_id} no existe")
         self._validar_items(datos.items)
 
@@ -224,6 +277,8 @@ class RecipeService:
             if item.tipo_calculo not in STRATEGIES:
                 errores.append(f"{pref}: tipo de cálculo '{item.tipo_calculo}' inexistente (válidos: {', '.join(sorted(STRATEGIES))})")
                 continue
+            if item.tipo_calculo == 'superficie':
+                errores.append(f"{pref}: las recetas nuevas deben calcular la tela por metro lineal (lineal_alto)")
             if item.insumos_alternativos and item.tipo_calculo != 'perfil':
                 errores.append(f"{pref}: solo los componentes de tipo 'perfil' admiten perfiles alternativos")
             for alt in item.insumos_alternativos:
@@ -232,14 +287,26 @@ class RecipeService:
                     errores.append(f"{pref}: el perfil alternativo {alt} no existe")
                 elif not alternativo.largo_pieza_cm:
                     errores.append(f"{pref}: el perfil alternativo '{alternativo.name}' no tiene largo de pieza cargado")
+                elif alternativo.unidad_medida not in ('cm', 'metro'):
+                    errores.append(f"{pref}: el perfil alternativo '{alternativo.name}' requiere stock en cm o metro")
             if item.tipo_calculo != 'mano_obra' and not item.id_insumo:
                 errores.append(f"{pref}: falta el insumo")
             insumo = insumos.get(item.id_insumo) if item.id_insumo else None
             if item.id_insumo and insumo is None:
                 errores.append(f"{pref}: el insumo {item.id_insumo} no existe")
             if insumo is not None:
+                if insumo.codigo_sku == ETIQUETA_SKU:
+                    errores.append(f"{pref}: la etiqueta se agrega automáticamente")
                 if item.tipo_calculo == 'perfil' and not insumo.largo_pieza_cm:
                     errores.append(f"{pref}: el insumo '{insumo.name}' no tiene largo de pieza cargado")
+                if item.tipo_calculo == 'perfil' and insumo.unidad_medida not in ('cm', 'metro'):
+                    errores.append(f"{pref}: los perfiles deben tener stock en cm o metro")
+                if insumo.es_tela and (item.tipo_calculo != 'lineal_alto' or insumo.unidad_medida != 'metro'
+                                       or not insumo.ancho_cm or insumo.ancho_cm <= 0 or insumo.precio_costo_unitario is None):
+                    errores.append(f"{pref}: la tela requiere cálculo lineal_alto, ancho positivo y stock y precio por metro")
+                if insumo.es_tela and item.tipo_calculo == 'lineal_alto' and (
+                        item.cantidad_base != 1 or item.formula_cantidad):
+                    errores.append(f"{pref}: cada corte de tela requiere un ítem separado con cantidad 1")
                 if isinstance(get_unit_strategy(insumo.unidad_medida), PieceUnit) and not insumo.largo_pieza_cm:
                     errores.append(f"{pref}: '{insumo.name}' se mide en {insumo.unidad_medida} y no tiene largo de pieza")
             for campo in ('formula_ancho', 'formula_alto', 'formula_cantidad', 'condicion'):
@@ -275,6 +342,12 @@ class RecipeService:
         receta, resultado, total = self._calcular(
             product_id, w, h, opciones, referencia=referencia)
 
+        necesario = {}
+        for r in resultado:
+            if r['metodo'] not in ('RETAZO', 'MANO_OBRA') and r['id_insumo']:
+                necesario[r['id_insumo']] = necesario.get(r['id_insumo'], Decimal(0)) + Decimal(str(r['consumo_m_o_m2']))
+        insumos = self.supplies.lock_many(list(necesario))
+
         retazos_ids = {r['id_retazo'] for r in resultado if r['id_retazo'] is not None}
         retazos = self.scraps.lock_available(retazos_ids, referencia)
         if retazos_ids - set(retazos):
@@ -288,12 +361,6 @@ class RecipeService:
             self.pieces.session.rollback()
             raise ConflictError("Un sobrante de perfil ya fue usado por otra producción. Recalculá la receta.")
 
-        necesario = {}
-        for r in resultado:
-            if r['metodo'] not in ('RETAZO', 'MANO_OBRA') and r['id_insumo']:
-                necesario[r['id_insumo']] = necesario.get(r['id_insumo'], Decimal(0)) + Decimal(str(r['consumo_m_o_m2']))
-
-        insumos = self.supplies.lock_many(list(necesario))
         faltantes = []
         for insumo_id, cantidad in necesario.items():
             insumo = insumos.get(insumo_id)
@@ -305,6 +372,65 @@ class RecipeService:
             self.supplies.session.rollback()
             raise ConflictError("Stock insuficiente para producir", detalles=faltantes)
 
+        perfiles = {r['id_insumo'] for r in resultado if r['metodo'] == 'PERFIL' and r['id_insumo']}
+        piezas_fisicas = self.pieces.lock_by_supply(perfiles)
+        por_insumo = {insumo_id: [] for insumo_id in perfiles}
+        for pieza in piezas_fisicas:
+            por_insumo[pieza.id_insumo].append(pieza)
+        for insumo_id, lista in por_insumo.items():
+            insumo = insumos[insumo_id]
+            if insumo.unidad_medida not in ('cm', 'metro'):
+                raise ConflictError(f"{insumo.name}: el stock de perfiles debe estar en cm o metro")
+            saldo_cm = Decimal(insumo.stock_actual or 0) * (100 if insumo.unidad_medida == 'metro' else 1)
+            largo_total = sum((Decimal(p.longitud_actual_cm) for p in lista), Decimal(0))
+            if saldo_cm != largo_total:
+                raise ConflictError(f"{insumo.name}: el saldo no coincide con las piezas físicas; conciliá el inventario")
+        for fila in resultado:
+            if fila['metodo'] != 'PERFIL':
+                continue
+            disponibles = por_insumo[fila['id_insumo']]
+            for corte in fila['cortes']:
+                if corte['origen'] == 'pieza_nueva':
+                    pieza = next((p for p in disponibles if not p.es_retazo and
+                                  Decimal(p.longitud_actual_cm) == Decimal(str(corte['largo_origen']))), None)
+                    if pieza is None:
+                        raise ConflictError(f"{insumos[fila['id_insumo']].name}: no hay una pieza física disponible para el corte")
+                    disponibles.remove(pieza)
+                    corte['id_pieza'] = pieza.id
+                    piezas[pieza.id] = pieza
+                elif corte['id_pieza'] is not None:
+                    pieza = piezas.get(corte['id_pieza'])
+                    if pieza is None or Decimal(pieza.longitud_actual_cm) != Decimal(str(corte['largo_origen'])):
+                        raise ConflictError("Un sobrante de perfil cambió; recalculá la receta")
+
+        minutos, mano_obra = self._mano_obra(resultado)
+        desgaste = self._desgaste()
+        total_final = round(total + mano_obra + desgaste, 2)
+        detalle = [
+            {key: value for key, value in fila.items() if key != 'retazo_tela'}
+            for fila in resultado
+        ]
+        produccion = ProductionRecord(
+            producto_id=product_id,
+            producto_nombre=receta.producto.nombre,
+            receta_id=receta.id,
+            receta_version=receta.version,
+            ancho_cm=w,
+            alto_cm=h,
+            opciones=opciones or {},
+            referencia=referencia,
+            total_materiales=total,
+            total_minutos=minutos,
+            total_mano_obra=mano_obra,
+            total_desgaste=desgaste,
+            total=total_final,
+            detalle=detalle,
+            usuario_id=self._usuario_id(),
+            usuario_nombre=getattr(getattr(g, 'current_user', None), 'nombre', None),
+        )
+        self.recipes.add(produccion)
+        self.recipes.session.flush()
+
         descontados = []
         referencia_movimiento = f"Producto {product_id}, receta v{receta.version}, {w:g}x{h:g} cm"
         if referencia:
@@ -314,8 +440,8 @@ class RecipeService:
             insumo.stock_actual = Decimal(insumo.stock_actual or 0) - cantidad
             self.inventory.agregar_movimiento(InventoryMovement(
                 id_insumo=insumo_id, tipo='consumo', cantidad=-cantidad,
-                stock_resultante=insumo.stock_actual, referencia=referencia_movimiento,
-                notas='Consumo por producción', usuario_id=self._usuario_id(),
+                stock_resultante=insumo.stock_actual, unidad=insumo.unidad_medida, referencia=referencia_movimiento,
+                notas='Consumo por producción', usuario_id=self._usuario_id(), produccion_id=produccion.id,
             ))
             descontados.append(StockDescontadoOut(
                 id_insumo=insumo_id, insumo=insumo.name, cantidad=float(cantidad),
@@ -326,8 +452,8 @@ class RecipeService:
         retazos_tela_generados = self._aplicar_retazos_tela(resultado, referencia_movimiento)
         self.supplies.commit()
 
-        minutos, mano_obra = self._mano_obra(resultado)
         return ProduccionOut(
+            produccion_id=produccion.id,
             version=receta.version,
             descontado=descontados,
             retazos_usados=sorted(retazos),
@@ -336,7 +462,8 @@ class RecipeService:
             total_materiales=total,
             total_minutos=minutos,
             total_mano_obra=mano_obra,
-            total=round(total + mano_obra, 2),
+            total_desgaste=desgaste,
+            total=total_final,
         )
 
     @staticmethod
@@ -365,23 +492,18 @@ class RecipeService:
         generados = 0
         for r in resultado:
             for corte in r['cortes']:
-                origen = None
-                if corte['origen'] == 'retazo':
-                    origen = piezas.get(corte['id_pieza']) or por_token.get(corte['tok_origen'])
+                origen = piezas.get(corte['id_pieza']) or por_token.get(corte['tok_origen'])
                 if corte['reutilizable']:
                     if origen is not None:
                         origen.longitud_actual_cm = Decimal(str(corte['sobrante']))
+                        if not origen.es_retazo:
+                            origen.es_retazo = True
+                            generados += 1
                         por_token[corte['tok_sobrante']] = origen
                     else:
-                        nueva = PiezaStock(
-                            id_insumo=r['id_insumo'],
-                            longitud_original_cm=Decimal(str(corte['largo_origen'])),
-                            longitud_actual_cm=Decimal(str(corte['sobrante'])),
-                            es_retazo=True,
-                        )
-                        self.pieces.session.add(nueva)
-                        por_token[corte['tok_sobrante']] = nueva
-                        generados += 1
+                        raise ConflictError("No se encontró la pieza física del corte; recalculá la receta")
                 elif origen is not None:
                     origen.longitud_actual_cm = Decimal(0)
+                else:
+                    raise ConflictError("No se encontró la pieza física del corte; recalculá la receta")
         return generados

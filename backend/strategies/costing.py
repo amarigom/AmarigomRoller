@@ -27,6 +27,9 @@ class ComponentInput:
     minutos: float = 0.0
     largo_pieza_cm: float | None = None
     min_retazo_cm: float = MIN_RETAZO_PERFIL_CM
+    es_tela: bool = False
+    ancho_rollo_cm: float | None = None
+    precio_m2: float | None = None
 
 
 @dataclass
@@ -44,6 +47,10 @@ class ComponentCost:
     merma_pct: float = 0.0
     minutos: float = 0.0
     cortes: list = field(default_factory=list)
+    unidad_costo: str | None = None
+    cantidad_costo: float | None = None
+    cantidad_reposicion: float | None = None
+    costo_reposicion: float = 0.0
 
 
 def buscar_retazo(retazos, ancho_corte, alto_corte):
@@ -105,6 +112,34 @@ class FabricStrategy(CalculationStrategy):
     por_superficie = False
 
     def calculate(self, data):
+        if data.es_tela:
+            if data.ancho_corte <= 0 or data.alto_corte <= 0:
+                raise UnprocessableError(f"{data.nombre}: las medidas de corte deben ser positivas")
+            if not data.ancho_rollo_cm or data.ancho_corte > data.ancho_rollo_cm:
+                raise UnprocessableError(f"{data.nombre}: el corte excede el ancho disponible de la tela")
+            if data.cantidad_base != 1:
+                raise UnprocessableError(f"{data.nombre}: los cortes múltiples de tela requieren componentes separados")
+            if self.por_superficie and data.precio_m2 is None:
+                raise UnprocessableError(f"{data.nombre}: falta cargar el precio por m²")
+            retazo = buscar_retazo(data.retazos, data.ancho_corte, data.alto_corte)
+            consumo_stock = 0 if retazo else data.alto_corte / 100
+            cantidad_costo = (data.ancho_corte * data.alto_corte / 10000 if self.por_superficie
+                              else data.alto_corte / 100) * (1 + data.merma_pct / 100)
+            precio = data.precio_m2 if self.por_superficie else data.precio_unitario
+            return ComponentCost(
+                componente=data.nombre, consumo_m_o_m2=round(consumo_stock, 4), unidad='metro',
+                consumo_cm=0 if retazo else data.alto_corte,
+                medida_corte=self._medida(data), precio_unitario=precio,
+                costo_parcial=0 if retazo else round(cantidad_costo * precio, 2),
+                metodo='RETAZO' if retazo else 'ROLLO', id_retazo=retazo.id if retazo else None,
+                mensaje='Usar retazo disponible' if retazo else '', merma_pct=data.merma_pct,
+                minutos=data.minutos, unidad_costo='m2' if self.por_superficie else 'metro',
+                cantidad_costo=0 if retazo else round(cantidad_costo, 4),
+                cantidad_reposicion=round(cantidad_costo, 4) if retazo and not self.por_superficie else None,
+                costo_reposicion=round(cantidad_costo * precio, 2) if retazo and not self.por_superficie else 0,
+            )
+        if self.por_superficie:
+            raise UnprocessableError(f"{data.nombre}: configurá el insumo como tela con precio por m²")
         consumo = self._convertir(data, data.alto_corte, data.ancho_corte, self.por_superficie)
         retazo = buscar_retazo(data.retazos, data.ancho_corte, data.alto_corte)
         if retazo:

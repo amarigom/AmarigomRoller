@@ -97,6 +97,9 @@ def calcular_explosion(componentes, retazos_por_insumo, w_pedido, h_pedido,
             retazos = pool_perfiles.setdefault(id_insumo, [])
 
         largo_pieza = getattr(insumo, 'largo_pieza_cm', None) if insumo else None
+        if insumo and getattr(insumo, 'es_tela', False):
+            if insumo.unidad_medida != 'metro' or insumo.precio_costo_unitario is None:
+                raise UnprocessableError(f"{insumo.name}: la tela requiere stock y precio por metro lineal")
         calculo = strategy.calculate(ComponentInput(
             nombre=(insumo.name if insumo else None) or getattr(item, 'nombre', None)
             or getattr(item, 'nombre_producto', None) or "Insumo sin nombre",
@@ -110,12 +113,15 @@ def calcular_explosion(componentes, retazos_por_insumo, w_pedido, h_pedido,
             minutos=float(getattr(item, 'minutos_mano_obra', 0) or 0),
             largo_pieza_cm=float(largo_pieza) if largo_pieza else None,
             min_retazo_cm=min_retazo_cm,
+            es_tela=bool(getattr(insumo, 'es_tela', False)),
+            ancho_rollo_cm=float(insumo.ancho_cm) if insumo and getattr(insumo, 'ancho_cm', None) else None,
+            precio_m2=float(insumo.precio_m2) if insumo and getattr(insumo, 'precio_m2', None) is not None else None,
         ))
         if calculo.id_retazo is not None:
             retazos_usados.add(calculo.id_retazo)
         fila = asdict(calculo)
         fila['id_insumo'] = id_insumo
-        if item.tipo_calculo in ('lineal_alto', 'superficie') and calculo.metodo == 'ROLLO' and insumo:
+        if item.tipo_calculo in ('lineal_alto', 'superficie') and calculo.metodo == 'ROLLO' and insumo and getattr(insumo, 'es_tela', False):
             ancho_sobrante = round(float(getattr(insumo, 'ancho_cm', 0) or 0) - ancho, 2)
             minimo_retazo_tela = (
                 float(current_app.config.get('MIN_RETAZO_TELA_CM', 80)) if has_app_context() else 80.0

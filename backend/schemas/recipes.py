@@ -1,7 +1,8 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 MAX_MEDIDA_CM = 1000
 
@@ -13,6 +14,26 @@ class MedidasIn(BaseModel):
     fecha: Optional[date] = None
     version: Optional[int] = Field(None, gt=0)
     referencia: Optional[str] = Field(None, max_length=255)
+
+
+class CotizacionMedidasIn(MedidasIn):
+    km_obra: Decimal = Field(Decimal('0'), ge=0, max_digits=9, decimal_places=2, allow_inf_nan=False)
+
+
+class CotizacionIn(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    receta_id: int = Field(..., gt=0)
+    ancho: float = Field(..., gt=0, le=MAX_MEDIDA_CM)
+    alto: float = Field(..., gt=0, le=MAX_MEDIDA_CM)
+    km_obra: Decimal = Field(Decimal('0'), ge=0, max_digits=9, decimal_places=2, allow_inf_nan=False)
+    referencia: Optional[str] = Field(None, max_length=255)
+    opciones: dict = Field(default_factory=dict)
+
+
+class GuardarPresupuestoIn(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    token: str = Field(..., min_length=1, max_length=100000)
 
 
 class RecipeItemIn(BaseModel):
@@ -117,6 +138,10 @@ class ExplosionItemOut(BaseModel):
     merma_pct: float = 0
     minutos: float = 0
     cortes: list[dict] = []
+    unidad_costo: Optional[str] = None
+    cantidad_costo: Optional[float] = None
+    cantidad_reposicion: Optional[float] = None
+    costo_reposicion: float = 0
 
 
 class ExplosionOut(BaseModel):
@@ -126,7 +151,38 @@ class ExplosionOut(BaseModel):
     total_materiales: float
     total_minutos: float = 0
     total_mano_obra: float = 0
+    total_desgaste: float = 0
     total: float = 0
+
+
+class DesgloseFabricacionOut(BaseModel):
+    costo_materiales: float
+    costo_operaciones: float
+    costo_desgaste: float
+    costo_total_fabricacion: float
+
+
+class PrecioProductoOut(BaseModel):
+    markup_pct: float
+    ganancia_markup: float
+    margen_sobre_ventas_pct: float
+    precio_venta_final: float
+
+
+class ServicioColocacionOut(BaseModel):
+    tarifa_base: float
+    km_ida: float
+    km_totales: float
+    costo_traslado: float
+    total_colocacion: float
+
+
+class CotizacionOut(ExplosionOut):
+    receta_id: int
+    desglose_fabricacion: DesgloseFabricacionOut
+    precio_producto: PrecioProductoOut
+    servicio_colocacion: ServicioColocacionOut
+    total_presupuesto: float
 
 
 class StockDescontadoOut(BaseModel):
@@ -139,6 +195,7 @@ class StockDescontadoOut(BaseModel):
 
 class ProduccionOut(BaseModel):
     status: str = "success"
+    produccion_id: int
     version: Optional[int] = None
     descontado: list[StockDescontadoOut]
     retazos_usados: list[int]
@@ -147,7 +204,38 @@ class ProduccionOut(BaseModel):
     total_materiales: float
     total_minutos: float = 0
     total_mano_obra: float = 0
+    total_desgaste: float = 0
     total: float = 0
+
+
+class ProductionHistoryOut(BaseModel):
+    id: int
+    producto_id: int
+    producto_nombre: str
+    receta_version: int
+    ancho_cm: float
+    alto_cm: float
+    opciones: dict
+    referencia: Optional[str]
+    total_materiales: float
+    total_minutos: float
+    total_mano_obra: float
+    total_desgaste: float
+    total: float
+    detalle: list[dict]
+    usuario: Optional[str]
+    creado_en: datetime
+
+    @classmethod
+    def from_model(cls, p):
+        return cls(
+            id=p.id, producto_id=p.producto_id, producto_nombre=p.producto_nombre,
+            receta_version=p.receta_version, ancho_cm=float(p.ancho_cm), alto_cm=float(p.alto_cm),
+            opciones=p.opciones or {}, referencia=p.referencia,
+            total_materiales=float(p.total_materiales), total_minutos=float(p.total_minutos),
+            total_mano_obra=float(p.total_mano_obra), total_desgaste=float(p.total_desgaste), total=float(p.total),
+            detalle=p.detalle or [], usuario=p.usuario_nombre, creado_en=p.creado_en,
+        )
 
 
 class RecipeItemOut(BaseModel):

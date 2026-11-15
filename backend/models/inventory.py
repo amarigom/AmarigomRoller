@@ -12,13 +12,16 @@ class InventoryMovement(db.Model):
     tipo = db.Column(db.String(20), nullable=False)
     cantidad = db.Column(db.Numeric(14, 4), nullable=False)
     stock_resultante = db.Column(db.Numeric(14, 4), nullable=False)
+    unidad = db.Column(db.String(20))
     referencia = db.Column(db.String(255))
     notas = db.Column(db.Text)
+    produccion_id = db.Column(db.Integer, db.ForeignKey('producciones.id'))
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
     creado_en = db.Column(db.DateTime, nullable=False, server_default=db.func.current_timestamp())
 
     insumo = db.relationship('Supply')
     usuario = db.relationship('User', foreign_keys=[usuario_id])
+    produccion = db.relationship('ProductionRecord')
 
 
 class SupplyPriceHistory(db.Model):
@@ -30,6 +33,8 @@ class SupplyPriceHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     id_insumo = db.Column(db.Integer, db.ForeignKey('insumos.id'), nullable=False)
     precio = db.Column(db.Numeric(12, 4), nullable=False)
+    unidad = db.Column(db.String(20))
+    precio_m2 = db.Column(db.Numeric(12, 4))
     vigente_desde = db.Column(db.DateTime, nullable=False, server_default=db.func.current_timestamp())
     motivo = db.Column(db.String(255))
     usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))

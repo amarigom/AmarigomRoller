@@ -69,7 +69,7 @@ def test_token_manipulado_o_expirado(client, app):
 MATRIZ = {
     "admin":  (200, 201, 200, 200, 201, 404, 200),
     "ventas": (200, 403, 403, 200, 201, 404, 403),
-    "taller": (200, 201, 403, 403, 403, 404, 403),
+    "taller": (200, 403, 403, 403, 403, 404, 403),
 }
 
 
@@ -77,7 +77,8 @@ MATRIZ = {
 def test_matriz_de_permisos(client, auth, rol):
     from models import SupplyCategory
     db.session.add(SupplyCategory(name="Telas"))
-    db.session.add(Supply(categoria_id=1, name="Existente"))
+    existente = Supply(categoria_id=1, name="Existente")
+    db.session.add(existente)
     db.session.commit()
     h = auth(rol)
     insumo = {"name": "T", "categoria_id": 1, "codigo_sku": "A1"}
@@ -85,7 +86,7 @@ def test_matriz_de_permisos(client, auth, rol):
     obtenido = (
         client.get("/api/inventory", headers=h).status_code,
         client.post("/api/inventory", json=insumo, headers=h).status_code,
-        client.delete("/api/inventory/1", headers=h).status_code,
+        client.delete(f"/api/inventory/{existente.id}", headers=h).status_code,
         client.get("/api/clients", headers=h).status_code,
         client.post("/api/clients", json=cliente, headers=h).status_code,
         client.get("/api/recipes/1", headers=h).status_code,
@@ -133,6 +134,5 @@ def test_cambiar_password(client, auth):
     assert client.post("/api/auth/change-password", json={"actual": PASSWORD, "nueva": "otra-clave-larga-1"}, headers=h).status_code == 200
     r = client.post("/api/auth/login", json={"email": "ventas@example.com", "password": "otra-clave-larga-1"})
     assert r.status_code == 200
-
 
 

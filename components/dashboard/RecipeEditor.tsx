@@ -3,17 +3,19 @@
 import { useCallback, useEffect, useState } from "react"
 import { Copy, Loader2, Plus, Trash2, Upload } from "lucide-react"
 import { apiFetch } from "@/lib/api"
+import { displayNumber, linearDisplay } from "@/lib/display-units"
 import type {
   ImportSummary, RecipeComponent, RecipeItemDraft, RecipeProductSummary, RecipeVersionSummary,
 } from "@/lib/types/recipe"
 
-interface Insumo { id: number; name: string; unit: string | null }
+interface Insumo { id: number; name: string; unit: string | null; code: string | null }
 interface TipoCalculo { tipo: string; descripcion: string }
 interface Preview {
   explosion: RecipeComponent[]
   total_materiales: number
   total_minutos: number
   total_mano_obra: number
+  total_desgaste: number
   total: number
 }
 
@@ -155,7 +157,7 @@ export default function RecipeEditor() {
       const v: RecipeVersionSummary = await res.json()
       setNota("")
       await Promise.all([abrir(productoId), cargarProductos()])
-      return `Versión ${v.version} publicada. Los presupuestos anteriores siguen usando su versión.`
+      return `Versión ${v.version} publicada. Los cálculos de versiones anteriores usan precios actuales.`
     })
   }
 
@@ -189,7 +191,7 @@ export default function RecipeEditor() {
       <div>
         <h1 className="font-serif text-3xl text-[#f5f0e8]">Recetas</h1>
         <p className="mt-1 text-sm italic text-[#6b6560]">
-          Cada cambio se publica como una versión nueva: los presupuestos anteriores no se modifican
+          Cada cambio se publica como una versión nueva. Los cálculos históricos usan precios actuales.
         </p>
       </div>
 
@@ -249,6 +251,7 @@ export default function RecipeEditor() {
               </div>
 
               <div className="space-y-3">
+                <p className="text-xs text-[#6b6560]">La etiqueta se agrega automáticamente a cada cortina.</p>
                 {items.map((it, n) => (
                   <div key={n} className="grid grid-cols-2 gap-2 rounded-2xl border border-[#2a2520] bg-[#111111] p-4 md:grid-cols-6">
                     <input className={`${inputClass} md:col-span-2`} placeholder="Nombre del componente" value={it.nombre}
@@ -256,12 +259,12 @@ export default function RecipeEditor() {
                     <select className={`${inputClass} md:col-span-2`} value={it.id_insumo ?? ""}
                       onChange={(e) => cambiar(n, "id_insumo", e.target.value ? Number(e.target.value) : null)}>
                       <option value="">{it.tipo_calculo === "mano_obra" ? "(sin insumo)" : "Insumo…"}</option>
-                      {insumos.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
+                      {insumos.filter((s) => s.code !== "ROLLER-ETIQUETA").map((s) => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
                     </select>
                     <select className={`${inputClass} md:col-span-2`} value={it.tipo_calculo}
                       onChange={(e) => cambiar(n, "tipo_calculo", e.target.value)}
                       title={tipos.find((t) => t.tipo === it.tipo_calculo)?.descripcion}>
-                      {tipos.map((t) => <option key={t.tipo} value={t.tipo}>{t.tipo}</option>)}
+                      {tipos.filter((t) => t.tipo !== "superficie" || it.tipo_calculo === "superficie").map((t) => <option key={t.tipo} value={t.tipo}>{t.tipo === "superficie" ? "superficie (histórico; cambiar a lineal_alto)" : t.tipo}</option>)}
                     </select>
                     {([
                       ["delta_ancho_cm", "Δ ancho (cm)"], ["delta_alto_cm", "Δ alto (cm)"], ["cantidad_base", "Cantidad"],
@@ -283,7 +286,7 @@ export default function RecipeEditor() {
                         <select multiple className={`${inputClass} h-24`} value={it.insumos_alternativos.map(String)}
                           onChange={(e) => cambiar(n, "insumos_alternativos",
                             Array.from(e.target.selectedOptions, (o) => Number(o.value)))}>
-                          {insumos.filter((s) => s.id !== it.id_insumo).map((s) => (
+                          {insumos.filter((s) => s.id !== it.id_insumo && s.code !== "ROLLER-ETIQUETA").map((s) => (
                             <option key={s.id} value={s.id}>{s.name}</option>
                           ))}
                         </select>
@@ -317,15 +320,32 @@ export default function RecipeEditor() {
                 {preview && (
                   <table className="w-full text-left text-sm text-[#f5f0e8]">
                     <tbody>
-                      {preview.explosion.map((e, i) => (
+                      {preview.explosion.map((e, i) => {
+                        const stock = linearDisplay(e.metodo === "RETAZO" ? 0 : e.consumo_m_o_m2, e.precio_unitario, e.unidad)
+                        const costo = linearDisplay(e.cantidad_costo ?? (e.metodo === "RETAZO" ? 0 : e.consumo_m_o_m2), e.precio_unitario, e.unidad_costo ?? e.unidad)
+                        return (
                         <tr key={i} className="border-t border-[#2a2520]">
-                          <td className="py-1.5">{e.componente}<span className="block text-[10px] text-[#6b6560]">{e.mensaje}</span></td>
+                          <td className="py-1.5">{e.componente}<span className="block text-[10px] text-[#6b6560]">{e.mensaje}</span>
+                            {e.metodo !== "MANO_OBRA" && <span className="block text-[10px] text-[#6b6560]">
+                              Stock: {displayNumber(stock.quantity, stock.unit === "metro" ? 2 : 0)} {stock.unit === "metro" ? "m" : stock.unit}
+                              {" · "}costo: {displayNumber(costo.quantity, costo.unit === "metro" ? 2 : 0)} {costo.unit === "metro" ? "m" : costo.unit} × ${displayNumber(costo.price, 2)} / {costo.unit === "metro" ? "m" : costo.unit}
+                            </span>}
+                            {!!e.costo_reposicion && <span className="block text-[10px] text-[#c9a961]">Referencia para venta: ${e.costo_reposicion.toLocaleString("es-AR")}</span>}
+                          </td>
                           <td className="py-1.5 text-[#6b6560]">{e.medida_corte}</td>
                           <td className="py-1.5 text-right">${e.costo_parcial.toLocaleString("es-AR")}</td>
                         </tr>
-                      ))}
+                      )})}
+                      <tr className="border-t border-[#2a2520]">
+                        <td className="py-1.5" colSpan={2}>Mano de obra ({preview.total_minutos} min)</td>
+                        <td className="py-1.5 text-right">${preview.total_mano_obra.toLocaleString("es-AR")}</td>
+                      </tr>
+                      <tr className="border-t border-[#2a2520]">
+                        <td className="py-1.5" colSpan={2}>Desgaste de maquinaria</td>
+                        <td className="py-1.5 text-right">${preview.total_desgaste.toLocaleString("es-AR")}</td>
+                      </tr>
                       <tr className="border-t border-[#c9a961]/40 font-bold text-[#c9a961]">
-                        <td className="py-2" colSpan={2}>Total ({preview.total_minutos} min de mano de obra)</td>
+                        <td className="py-2" colSpan={2}>Costo total de fabricación</td>
                         <td className="py-2 text-right">${preview.total.toLocaleString("es-AR")}</td>
                       </tr>
                     </tbody>

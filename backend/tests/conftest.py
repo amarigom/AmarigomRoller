@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from extensions import db  # noqa: E402
 from factory import create_app  # noqa: E402
-from models import User  # noqa: E402
+from models import Supply, SupplyCategory, User  # noqa: E402
 from services.users import UserService  # noqa: E402
 from strategies.notifications import Notifier  # noqa: E402
 
@@ -30,10 +30,20 @@ def app(tmp_path):
         "TESTING": True,
         "QUOTE_RECIPIENT": "taller@example.com",
         "LOGIN_MAX_ATTEMPTS": 3,
+        "COSTO_MINUTO_MANO_OBRA": 0,
+        "COSTO_DESGASTE_MAQUINARIA": "2000",
     })
     app.extensions["notifier"] = FakeNotifier()
     with app.app_context():
         db.create_all()
+        categoria = SupplyCategory(name="Accesorios")
+        db.session.add(categoria)
+        db.session.flush()
+        db.session.add(Supply(
+            categoria_id=categoria.id, codigo_sku='ROLLER-ETIQUETA', name='Etiqueta',
+            unidad_medida='unidad', precio_costo_unitario=200, stock_actual=10000,
+        ))
+        db.session.commit()
         yield app
         db.session.remove()
         db.drop_all()
@@ -65,4 +75,3 @@ def auth(client):
             _crear_usuario(rol)
         return _login(client, f"{rol}@example.com")
     return _auth
-

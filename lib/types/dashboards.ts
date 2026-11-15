@@ -20,7 +20,7 @@ export type StockStatus = "in-stock" | "low-stock" | "critical"
 // Lo que ve todo el mundo en AMARIGOM DECO
 export interface Supply {
   id: number;
-  code: string;
+  code: string | null;
   name: string;
   category: string;
   metersLeft: number;
@@ -28,7 +28,18 @@ export interface Supply {
   widthCm: number;
   unit: string;
   status: StockStatus;
-  pricePerMeter: number;
+  pricePerMeter?: number;
+  stock_minimo?: number;
+  es_tela?: boolean;
+  precio_m2?: number | null;
+  largo_pieza_cm?: number | null;
+  unidad_compra?: string | null;
+  factor_conversion?: number | null;
+  perfil_en_receta?: boolean;
+  piezas_enteras?: number;
+  piezas_retazos?: number;
+  longitud_piezas_cm?: number;
+  piezas_conciliadas?: boolean | null;
 }
 
 // Lo que ves vos como Dueño (Extensión)

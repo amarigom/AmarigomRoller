@@ -38,7 +38,7 @@ def test_preview_calcula_sin_guardar(client, auth):
     r = client.post("/api/recipes/preview", json=cuerpo, headers=auth("admin"))
     assert r.status_code == 200, r.get_json()
     datos = r.get_json()
-    assert [e["componente"] for e in datos["explosion"]] == ["Tubo 4 mts", "Soporte"]
+    assert [e["componente"] for e in datos["explosion"]] == ["Tubo 4 mts", "Soporte", "Etiqueta"]
     assert datos["version"] is None
     assert Receta.query.count() == 0
 
@@ -50,6 +50,33 @@ def test_preview_valida_como_al_publicar(client, auth):
     r = client.post("/api/recipes/preview", json={"items": items}, headers=auth("admin"))
     assert r.status_code == 400
     assert any("condicion" in d for d in r.get_json()["detalles"])
+
+
+def test_publicacion_rechaza_unidades_y_formas_de_calculo_incompatibles(client, auth):
+    tubo, soporte = _insumos()
+    tubo.unidad_medida = 'unidad'
+    tela = Supply(categoria_id=tubo.categoria_id, name='Tela', unidad_medida='metro',
+                  precio_costo_unitario=100, stock_actual=10, ancho_cm=220, es_tela=True)
+    db.session.add(tela)
+    db.session.commit()
+    crear_receta(1, [{'id_insumo': soporte.id, 'nombre': 'Soporte', 'tipo_calculo': 'fijo'}])
+    h = auth('admin')
+    for item in (
+        {'id_insumo': tubo.id, 'nombre': 'Tubo', 'tipo_calculo': 'perfil'},
+        {'id_insumo': tela.id, 'nombre': 'Tela', 'tipo_calculo': 'superficie'},
+        {'id_insumo': tela.id, 'nombre': 'Tela', 'tipo_calculo': 'lineal_alto', 'cantidad_base': 2},
+    ):
+        response = client.post('/api/recipes/1/versions', json={'items': [item]}, headers=h)
+        assert response.status_code == 400, response.get_json()
+    assert Receta.query.count() == 1
+
+
+def test_duplicar_receta_historica_invalida_no_crea_producto(client, auth):
+    _, soporte = _insumos()
+    crear_receta(1, [{'id_insumo': soporte.id, 'nombre': 'Antiguo', 'tipo_calculo': 'superficie'}])
+    response = client.post('/api/recipes/1/duplicate', headers=auth('admin'), json={'nombre': 'Copia inválida'})
+    assert response.status_code == 400
+    assert Product.query.filter_by(nombre='Copia inválida').first() is None
 
 
 def test_preview_solo_admin(client, auth):

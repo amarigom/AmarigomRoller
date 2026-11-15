@@ -21,3 +21,7 @@ class Supply(db.Model):
     ancho_cm = db.Column(db.Numeric(10, 2))
     # Largo de la pieza que se compra (perfil de 200/400/600 cm, rollo de cinta de 5000 cm)
     largo_pieza_cm = db.Column(db.Numeric(10, 2))
+    es_tela = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    precio_m2 = db.Column(db.Numeric(12, 4))
+    unidad_compra = db.Column(db.String(20))
+    factor_conversion = db.Column(db.Numeric(12, 4))

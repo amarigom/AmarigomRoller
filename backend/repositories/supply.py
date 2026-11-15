@@ -18,11 +18,18 @@ class SupplyRepository(BaseRepository):
             .first()
         )
 
+    def by_sku(self, sku):
+        return Supply.query.filter_by(codigo_sku=sku).first()
+
+    def active_by_skus(self, skus):
+        return Supply.query.filter(Supply.codigo_sku.in_(skus), Supply.activo.is_(True)).all()
+
     def lock_many(self, supply_ids):
         """Trae los insumos bloqueándolos hasta el commit (evita descuentos simultáneos pisados)."""
         if not supply_ids:
             return {}
-        rows = Supply.query.filter(Supply.id.in_(supply_ids), Supply.activo.is_(True)).with_for_update().all()
+        rows = (Supply.query.filter(Supply.id.in_(supply_ids), Supply.activo.is_(True))
+                .order_by(Supply.id).populate_existing().with_for_update().all())
         return {s.id: s for s in rows}
 
     def get_many(self, supply_ids):
