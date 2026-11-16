@@ -1,0 +1,306 @@
+import os
+import sys
+from types import SimpleNamespace as NS
+
+import pytest
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from extensions import db
+from models import PiezaStock, Supply, SupplyCategory
+from tests.helpers import crear_receta
+from services.costeo import calcular_explosion
+from strategies.costing import ComponentInput, WidthLinearStrategy
+
+PRECIO_CM = 50.0
+
+
+def insumo(unidad='cm', precio=PRECIO_CM, name='Tubo 32 x 4 mts', largo=400):
+    return NS(name=name, unidad_medida=unidad, precio_costo_unitario=precio, largo_pieza_cm=largo)
+
+
+def componente(tipo, ins, id_insumo=1, dw=0, dh=0, base=1, merma=0, minutos=0):
+    return NS(insumo=ins, id_insumo=id_insumo, nombre_producto='x', tipo_calculo=tipo,
+              delta_ancho_cm=dw, delta_alto_cm=dh, cantidad_base=base,
+              merma_pct=merma, minutos_mano_obra=minutos)
+
+
+def sobrante(id_, largo):
+    return NS(id=id_, longitud_actual_cm=largo)
+
+
+# --- Unidades -------------------------------------------------------------------------
+
+def test_espagueti_por_metro_consume_en_metros():
+    ins = insumo('metro', 70, 'Espagueti', largo=20000)
+    res, total = calcular_explosion([componente('lineal_ancho', ins, dw=1)], {}, 149, 200)
+    assert res[0]['consumo_m_o_m2'] == 1.5
+    assert total == 105.0
+
+
+def test_cinta_por_rollo_de_50_m():
+    ins = insumo('rollo', 18000, 'Cinta doble faz (50 mts)', largo=5000)
+    res, total = calcular_explosion([componente('lineal_ancho', ins)], {}, 150, 200)
+    assert res[0]['consumo_m_o_m2'] == 0.03
+    assert total == 540.0
+
+
+def test_rollo_sin_largo_de_pieza_da_error_claro():
+    ins = insumo('rollo', 18000, 'Cinta', largo=None)
+    with pytest.raises(Exception) as exc:
+        WidthLinearStrategy().calculate(ComponentInput(
+            nombre='Cinta', unidad='rollo', precio_unitario=1, ancho_corte=100, alto_corte=100))
+    assert 'largo_pieza_cm' in str(exc.value)
+
+
+# --- Perfiles ---------------------------------------------------------------------------
+
+def test_perfil_corta_pieza_nueva_y_guarda_sobrante_reutilizable():
+    res, total = calcular_explosion([componente('perfil', insumo())], {}, 148.5, 200)
+    r = res[0]
+    assert r['metodo'] == 'PERFIL'
+    assert r['consumo_m_o_m2'] == 148.5
+    assert total == round(148.5 * PRECIO_CM, 2)
+    corte = r['cortes'][0]
+    assert corte['origen'] == 'pieza_nueva'
+    assert corte['sobrante'] == 251.5 and corte['reutilizable']
+
+
+def test_perfil_sobrante_menor_al_minimo_se_descarta_y_se_cobra():
+    res, total = calcular_explosion([componente('perfil', insumo())], {}, 350, 200)
+    assert res[0]['cortes'][0]['reutilizable'] is False
+    assert res[0]['consumo_m_o_m2'] == 400
+    assert total == 400 * PRECIO_CM
+
+
+def test_perfil_usa_sobrante_existente_antes_que_pieza_nueva():
+    res, total = calcular_explosion(
+        [componente('perfil', insumo())], {}, 148.5, 200,
+        sobrantes_perfil={1: [sobrante(10, 300), sobrante(11, 160)]})
+    corte = res[0]['cortes'][0]
+    assert corte['origen'] == 'retazo' and corte['id_pieza'] == 11
+    assert corte['sobrante'] == 11.5 and corte['reutilizable'] is False
+    assert res[0]['consumo_m_o_m2'] == 160
+
+
+def test_perfil_dos_componentes_reutilizan_el_sobrante_del_primero():
+    comps = [componente('perfil', insumo()), componente('perfil', insumo())]
+    res, total = calcular_explosion(comps, {}, 150, 200)
+    assert res[0]['cortes'][0]['origen'] == 'pieza_nueva'
+    assert res[1]['cortes'][0]['origen'] == 'retazo'
+    assert res[1]['cortes'][0]['tok_origen'] == res[0]['cortes'][0]['tok_sobrante']
+
+
+def test_perfil_varios_cortes_por_componente():
+    res, _ = calcular_explosion([componente('perfil', insumo(), base=2)], {}, 150, 200)
+    origenes = [c['origen'] for c in res[0]['cortes']]
+    assert origenes == ['pieza_nueva', 'retazo']
+
+
+def test_perfil_mas_largo_que_la_pieza_da_error_claro():
+    with pytest.raises(Exception) as exc:
+        calcular_explosion([componente('perfil', insumo(largo=200))], {}, 250, 200)
+    assert 'no entra' in str(exc.value) and 'alternativa' in str(exc.value)
+
+
+def test_perfil_usa_la_alternativa_mas_corta_que_alcance():
+    p2, p4, p6 = insumo(largo=200, name='x2'), insumo(largo=400, name='x4'), insumo(largo=600, name='x6')
+    item = componente('perfil', p2)
+    item.insumos_alternativos = [6, 4]
+    res, _ = calcular_explosion([item], {}, 250, 200, insumos_alternativos={6: p6, 4: p4})
+    assert res[0]['id_insumo'] == 4 and res[0]['cortes'][0]['largo_origen'] == 400
+    assert res[0]['componente'] == 'x4'
+
+
+def test_perfil_conserva_el_de_la_receta_si_alcanza():
+    item = componente('perfil', insumo(largo=400))
+    item.insumos_alternativos = [4]
+    res, _ = calcular_explosion([item], {}, 150, 200, insumos_alternativos={4: insumo(largo=200)})
+    assert res[0]['id_insumo'] == 1
+
+
+def test_perfil_sin_alternativa_que_alcance_informa_el_mayor_largo():
+    item = componente('perfil', insumo(largo=200))
+    item.insumos_alternativos = [4]
+    with pytest.raises(Exception) as exc:
+        calcular_explosion([item], {}, 450, 200, insumos_alternativos={4: insumo(largo=400)})
+    assert '400' in str(exc.value)
+
+
+def test_perfil_respeta_largos_de_2_4_y_6_metros():
+    for largo in (200, 400, 600):
+        res, _ = calcular_explosion([componente('perfil', insumo(largo=largo))], {}, 150, 200)
+        assert res[0]['cortes'][0]['largo_origen'] == largo
+
+
+# --- Merma y mano de obra ---------------------------------------------------------------
+
+def test_merma_aumenta_consumo_y_costo():
+    ins = insumo('metro', 1000, 'Tela', largo=None)
+    res, total = calcular_explosion([componente('lineal_alto', ins, merma=5)], {}, 150, 200)
+    assert res[0]['consumo_m_o_m2'] == 2.1
+    assert total == 2100.0
+
+
+def test_mano_de_obra_se_informa_por_componente():
+    ins = insumo('unidad', 0, 'Armado', largo=None)
+    res, total = calcular_explosion([componente('mano_obra', ins, id_insumo=None, minutos=25)], {}, 150, 200)
+    assert res[0]['minutos'] == 25 and total == 0.0
+
+
+# --- API ------------------------------------------------------------------------------------
+
+def _seed_perfil(stock_cm=1200):
+    cat = SupplyCategory(name="Perfiles")
+    db.session.add(cat)
+    db.session.flush()
+    tubo = Supply(categoria_id=cat.id, name="Tubo 32 x 4 mts", unidad_medida="cm",
+                  precio_costo_unitario=PRECIO_CM, stock_actual=stock_cm, largo_pieza_cm=400)
+    db.session.add(tubo)
+    db.session.flush()
+    if stock_cm == 1200:
+        db.session.add_all([PiezaStock(id_insumo=tubo.id, longitud_original_cm=400,
+                                      longitud_actual_cm=400, es_retazo=False) for _ in range(3)])
+    crear_receta(1, [
+        dict(id_insumo=tubo.id, nombre="Tubo", tipo_calculo="perfil", delta_ancho_cm=-1.5),
+        dict(id_insumo=None, nombre="Armado", tipo_calculo="mano_obra", minutos_mano_obra=30),
+    ])
+    return tubo
+
+
+def test_explosion_incluye_mano_de_obra_y_total(client, auth, app):
+    app.config['COSTO_MINUTO_MANO_OBRA'] = 10
+    _seed_perfil()
+    r = client.get("/api/test-recipe/1?w=150&h=200", headers=auth("admin"))
+    assert r.status_code == 200, r.get_json()
+    body = r.get_json()
+    assert body['total_minutos'] == 30
+    assert body['total_mano_obra'] == 300.0
+    assert body['total'] == body['total_materiales'] + 300.0 + 2000.0
+
+
+def test_producir_perfil_guarda_sobrante_y_la_siguiente_lo_aprovecha(client, auth):
+    tubo = _seed_perfil()
+    r = client.post("/api/recipes/1/produce", json={"w": 150, "h": 200}, headers=auth("taller"))
+    assert r.status_code == 200, r.get_json()
+    assert r.get_json()['retazos_perfil_generados'] == 1
+    db.session.expire_all()
+    # corte de 148.5 con sobrante reutilizable: solo se descuenta lo cortado
+    assert float(db.session.get(Supply, tubo.id).stock_actual) == 1200 - 148.5
+    sobrantes = PiezaStock.query.filter_by(es_retazo=True).all()
+    assert len(sobrantes) == 1 and float(sobrantes[0].longitud_actual_cm) == 251.5
+
+    again = client.post("/api/recipes/1/produce", json={"w": 150, "h": 200}, headers=auth("taller"))
+    assert again.status_code == 200
+    assert again.get_json()['retazos_perfil_generados'] == 0
+    db.session.expire_all()
+    sobrantes = PiezaStock.query.filter_by(es_retazo=True).all()
+    assert len(sobrantes) == 1 and float(sobrantes[0].longitud_actual_cm) == 103.0
+
+
+def test_producir_perfil_sin_stock_no_guarda_sobrantes(client, auth):
+    _seed_perfil(stock_cm=100)
+    r = client.post("/api/recipes/1/produce", json={"w": 150, "h": 200}, headers=auth("taller"))
+    assert r.status_code == 409
+    assert PiezaStock.query.count() == 0
+
+
+def test_saldo_sin_piezas_fisicas_no_permite_producir(client, auth):
+    tubo = _seed_perfil()
+    PiezaStock.query.filter_by(id_insumo=tubo.id).delete()
+    db.session.commit()
+    r = client.post("/api/recipes/1/produce", json={"w": 150, "h": 200}, headers=auth("taller"))
+    assert r.status_code == 409
+    assert 'piezas físicas' in r.get_json()['message']
+    assert float(db.session.get(Supply, tubo.id).stock_actual) == 1200
+
+
+def test_ingreso_de_perfiles_registra_piezas_y_movimiento(client, auth):
+    tubo = _seed_perfil(stock_cm=0)
+    h = auth('taller')
+    r = client.post(f'/api/inventory/{tubo.id}/pieces', headers=h,
+                    json={'cantidad': 2, 'referencia': 'Compra'})
+    assert r.status_code == 201, r.get_json()
+    assert float(db.session.get(Supply, tubo.id).stock_actual) == 800
+    assert PiezaStock.query.filter_by(id_insumo=tubo.id, es_retazo=False).count() == 2
+    assert client.post(f'/api/inventory/{tubo.id}/movements', headers=h,
+                       json={'tipo': 'entrada', 'cantidad': 400}).status_code == 409
+    assert client.post('/api/recipes/1/produce', headers=h, json={'w': 150, 'h': 200}).status_code == 200
+    data = client.get('/api/inventory', headers=h).get_json()
+    perfil = next(p for p in data if p['id'] == tubo.id)
+    assert perfil['piezas_conciliadas'] is True
+    assert perfil['piezas_enteras'] == 1 and perfil['piezas_retazos'] == 1
+
+
+# --- Perfiles alternativos (el corte nunca se empalma) --------------------------------------
+
+def _seed_con_alternativa():
+    cat = SupplyCategory(name="Perfiles")
+    db.session.add(cat)
+    db.session.flush()
+    corto = Supply(categoria_id=cat.id, name="Tubo 2 m", unidad_medida="cm", precio_costo_unitario=PRECIO_CM,
+                   stock_actual=1000, largo_pieza_cm=200)
+    largo = Supply(categoria_id=cat.id, name="Tubo 4 m", unidad_medida="cm", precio_costo_unitario=PRECIO_CM,
+                   stock_actual=1200, largo_pieza_cm=400)
+    db.session.add_all([corto, largo])
+    db.session.flush()
+    db.session.add_all([PiezaStock(id_insumo=corto.id, longitud_original_cm=200, longitud_actual_cm=200, es_retazo=False)
+                        for _ in range(5)])
+    db.session.add_all([PiezaStock(id_insumo=largo.id, longitud_original_cm=400, longitud_actual_cm=400, es_retazo=False)
+                        for _ in range(3)])
+    db.session.commit()
+    crear_receta(1, [{"id_insumo": corto.id, "nombre": "Tubo", "tipo_calculo": "perfil",
+                      "insumos_alternativos": [largo.id]}])
+    return corto, largo
+
+
+def test_receta_cambia_al_perfil_alternativo_cuando_el_ancho_no_entra(client, auth):
+    corto, largo = _seed_con_alternativa()
+    h = auth("ventas")
+    angosto = client.get("/api/test-recipe/1?w=150&h=200", headers=h).get_json()
+    ancho = client.get("/api/test-recipe/1?w=250&h=200", headers=h).get_json()
+    assert angosto["explosion"][0]["componente"] == "Tubo 2 m"
+    assert ancho["explosion"][0]["componente"] == "Tubo 4 m"
+    assert ancho["explosion"][0]["cortes"][0]["largo_origen"] == 400
+
+
+def test_producir_descuenta_stock_del_perfil_elegido(client, auth):
+    corto, largo = _seed_con_alternativa()
+    r = client.post("/api/recipes/1/produce", json={"w": 250, "h": 200}, headers=auth("taller"))
+    assert r.status_code == 200, r.get_json()
+    db.session.expire_all()
+    assert float(db.session.get(Supply, corto.id).stock_actual) == 1000
+    assert float(db.session.get(Supply, largo.id).stock_actual) == 1200 - 250
+    assert PiezaStock.query.filter_by(es_retazo=True).one().id_insumo == largo.id
+
+
+def test_sin_alternativa_el_ancho_largo_da_422(client, auth):
+    corto, _ = _seed_con_alternativa()
+    r = client.get("/api/test-recipe/1?w=500&h=200", headers=auth("ventas"))
+    assert r.status_code == 422
+    assert "400" in r.get_json()["message"]
+
+
+def test_publicar_valida_perfiles_alternativos(client, auth):
+    corto, largo = _seed_con_alternativa()
+    h = auth("admin")
+    item = {"id_insumo": corto.id, "nombre": "Tubo", "tipo_calculo": "perfil"}
+    ok = client.post("/api/recipes/1/versions", json={"items": [{**item, "insumos_alternativos": [largo.id]}]}, headers=h)
+    assert ok.status_code == 201, ok.get_json()
+    inexistente = client.post("/api/recipes/1/versions", json={"items": [{**item, "insumos_alternativos": [999]}]}, headers=h)
+    assert inexistente.status_code == 400
+    en_fijo = client.post("/api/recipes/1/versions", json={"items": [
+        {**item, "tipo_calculo": "fijo", "insumos_alternativos": [largo.id]}]}, headers=h)
+    assert en_fijo.status_code == 400
+    detalle = client.get("/api/recipes/1/detail", headers=h).get_json()
+    assert detalle[0]["insumos_alternativos"] == [largo.id]
+
+
+def test_importar_csv_con_alternativas(client, auth):
+    corto, largo = _seed_con_alternativa()
+    csv = f"producto;nombre;id_insumo;tipo_calculo;insumos_alternativos\nRoller;Tubo;{corto.id};perfil;{largo.id}\n"
+    h = auth("admin")
+    assert client.post("/api/recipes/import", json={"csv": csv, "aplicar": True}, headers=h).status_code == 200
+    from models import Product
+    pid = Product.query.filter_by(nombre="Roller").one().id
+    assert client.get(f"/api/recipes/{pid}/detail", headers=h).get_json()[0]["insumos_alternativos"] == [largo.id]

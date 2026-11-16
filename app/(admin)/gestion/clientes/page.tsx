@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Cliente } from "@/lib/types/client";
+import { apiFetch } from "@/lib/api";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table"; 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +37,7 @@ export default function ClientesPage() {
   const fetchClientes = async () => {
     setCargando(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/clients`);
+      const response = await apiFetch(`/api/clients`);
       if (!response.ok) throw new Error("Error al obtener datos");
       const data = await response.json();
       setClientes(data);
@@ -70,7 +71,7 @@ export default function ClientesPage() {
     try {
       console.log("Enviando datos a:", `${API_BASE_URL}/api/clients`);
       
-      const response = await fetch(`${API_BASE_URL}/api/clients`, {
+      const response = await apiFetch(`/api/clients`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Package, Filter, Ruler, Tag, Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { displayNumber, linearDisplay } from "@/lib/display-units"
 
 // En InventoryView.tsx
 import type { Supply } from "@/lib/types/dashboards" // O donde lo tengas
@@ -26,7 +27,7 @@ export default function InventoryView({ supplies }: InventoryViewProps) {
     const matchesCategory = filterCategory === "all" || supply.category === filterCategory
     const matchesSearch = 
       supply.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      supply.code.toLowerCase().includes(searchQuery.toLowerCase())
+      (supply.code || "").toLowerCase().includes(searchQuery.toLowerCase())
     
     return matchesCategory && matchesSearch
   })
@@ -89,7 +90,11 @@ export default function InventoryView({ supplies }: InventoryViewProps) {
 
       {/* Inventory Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {filtered.map((supply) => (
+        {filtered.map((supply) => {
+          const display = linearDisplay(supply.metersLeft, 0, supply.unit)
+          const price = supply.pricePerMeter === undefined ? null : linearDisplay(0, supply.pricePerMeter, supply.unit).price
+          const minimo = linearDisplay(supply.stock_minimo ?? 0, 0, supply.unit).quantity
+          return (
           <div
             key={supply.id}
             className="bg-[#111111] border border-[#2a2520] rounded-lg p-5 flex flex-col gap-4 hover:border-[#c9a961]/30 transition-all hover:shadow-[0_0_20px_rgba(201,169,97,0.05)] relative group"
@@ -109,7 +114,7 @@ export default function InventoryView({ supplies }: InventoryViewProps) {
               <div className="flex-1 pr-8">
                 <h3 className="text-sm font-medium text-[#f5f0e8] leading-snug line-clamp-1">{supply.name}</h3>
                 <p className="text-[10px] text-[#6b6560] mt-0.5 flex items-center gap-1">
-                  <Tag size={10} /> {supply.category}
+                  <Tag size={10} /> {supply.category} · ID {supply.id}
                 </p>
               </div>
             </div>
@@ -119,17 +124,26 @@ export default function InventoryView({ supplies }: InventoryViewProps) {
               <div>
                 <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Stock</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-serif text-[#f5f0e8]">{supply.metersLeft}</span>
-                  <span className="text-[10px] text-[#6b6560] lowercase">{supply.unit}</span>
+                  <span className="text-xl font-serif text-[#f5f0e8]">{displayNumber(display.quantity, display.unit === "metro" ? 2 : 0)}</span>
+                  <span className="text-[10px] text-[#6b6560] lowercase">{display.unit === "metro" ? "m" : display.unit}</span>
                 </div>
               </div>
-              <div className="text-right border-l border-[#2a2520]/50 pl-4">
-                <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Precio</p>
+              {price !== null && <div className="text-right border-l border-[#2a2520]/50 pl-4">
+                <p className="text-[9px] text-[#6b6560] uppercase tracking-widest mb-1">Precio por {display.unit}</p>
                 <p className="text-lg text-[#7a9b76] font-medium">
-                  ${supply.pricePerMeter.toLocaleString('es-AR')}
+                  ${displayNumber(price, 2)}
                 </p>
-              </div>
+              </div>}
             </div>
+            {supply.es_tela && <p className="text-xs text-[#a49b8e]">Tela{price !== null && " · precio por metro lineal"}</p>}
+            {supply.unit === "cm" && <p className="text-xs text-[#a49b8e]">Registro y operaciones en cm; valores convertidos a metros para consulta.</p>}
+            {supply.unidad_compra && <p className="text-xs text-[#a49b8e]">Compra: 1 {supply.unidad_compra} = {supply.factor_conversion} {supply.unit}</p>}
+            {supply.perfil_en_receta && (
+              <p className="text-xs text-[#a49b8e]">
+                Piezas enteras: {supply.piezas_enteras} · retazos: {supply.piezas_retazos} · longitud física: {supply.longitud_piezas_cm} cm
+                {supply.piezas_conciliadas === false && <span className="block text-red-300">El saldo no coincide con las piezas físicas. No se puede producir hasta conciliar.</span>}
+              </p>
+            )}
 
             {/* Footer */}
             <div className="flex items-center justify-between mt-auto">
@@ -139,10 +153,11 @@ export default function InventoryView({ supplies }: InventoryViewProps) {
                   <span className="text-xs">{supply.widthCm} cm ancho</span>
                 </div>
               ) : <div />}
-              <span className="text-[9px] text-[#2a2520] font-mono">{supply.status}</span>
+              {supply.largo_pieza_cm ? <span className="text-xs text-[#6b6560]">Pieza: {supply.largo_pieza_cm} cm</span> : null}
+              <span className="text-[10px] text-[#a49b8e]">Mínimo: {displayNumber(minimo, display.unit === "metro" ? 2 : 0)} {display.unit === "metro" ? "m" : display.unit}</span>
             </div>
           </div>
-        ))}
+        )})}
       </div>
 
       {/* Empty State */}

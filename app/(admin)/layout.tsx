@@ -3,9 +3,12 @@
 
 import { useState } from "react"
 import Sidebar from "@/components/dashboard/Sidebar"
+import AuthGuard from "@/components/dashboard/AuthGuard"
+import type { Session } from "@/lib/api"
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false)
+  const [session, setSession] = useState<Session | null>(null)
 
   // Datos de ejemplo
   const stats = {
@@ -15,11 +18,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
+    <AuthGuard onSession={setSession}>
     <div className="flex min-h-screen bg-[#0a0a0a]">
       <Sidebar 
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed(!collapsed)}
         stats={stats}
+        session={session}
       />
       
       {/* Ajustamos el main:
@@ -33,5 +38,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </main>
     </div>
+    </AuthGuard>
   )
 }

@@ -1,161 +1,214 @@
 from flask import Blueprint, jsonify, request
-from models.recipe_bom import RecipeBOM
-from models import db
-from models import RetazoTela
+
+import container
+from exceptions import ValidationFailed
+from schemas.common import parse_payload
+from schemas.recipes import (
+    MAX_MEDIDA_CM, CotizacionIn, CotizacionMedidasIn, DuplicateIn, GuardarPresupuestoIn, ImportIn, MedidasIn, PreviewIn,
+    ProductIn, RecipeVersionIn,
+)
+from security.decorators import permission_required
+from security.permissions import QUOTES_READ, RECIPES_PRODUCE, RECIPES_READ, RECIPES_WRITE
+from security.price_visibility import (
+    cotizacion_visible, explosion_visible, historial_produccion_visible, presupuesto_visible, produccion_visible,
+)
+from services import recipe_import
 
 recipes_bp = Blueprint('recipes', __name__)
 
+PARAMETROS_RESERVADOS = {'w', 'h', 'fecha', 'version', 'opciones', 'referencia'}
+MAX_OPCIONES = 20
+
+
+def _medidas(source):
+    try:
+        return parse_payload(MedidasIn, source)
+    except ValidationFailed as e:
+        raise ValidationFailed(
+            f"Medidas inválidas: deben ser números entre 0 y {MAX_MEDIDA_CM} cm", e.detalles)
+
+
+def _valor(texto):
+    if not isinstance(texto, str):
+        return texto
+    try:
+        return float(texto)
+    except ValueError:
+        return texto
+
+
+def _opciones(pares):
+    """Variantes del pedido (sistema=motor, color=blanco...): usables en condiciones y fórmulas."""
+    opciones = {
+        k: _valor(v) for k, v in pares.items()
+        if k not in PARAMETROS_RESERVADOS and k.isidentifier() and len(k) <= 30
+        and isinstance(v, (str, int, float)) and len(str(v)) <= 50
+    }
+    if len(opciones) > MAX_OPCIONES:
+        raise ValidationFailed(f"Se permiten hasta {MAX_OPCIONES} opciones")
+    return opciones
+
+
 @recipes_bp.route('/test-recipe/<int:product_id>', methods=['GET'])
-def test_recipe(product_id):
-    resultado = [] 
-    try:
-        # 1. Inicio y búsqueda de componentes
-        print(f"--- INICIANDO CALCULO PARA PRODUCTO ID: {product_id} ---")
-        
-        components = RecipeBOM.query.filter_by(id_padre=product_id).all()
-        if not components:
-            return jsonify({"status": "error", "message": f"No hay receta para el ID {product_id}","message": f"El producto {product_id} aún no tiene definida su explosión de materiales."}), 404
+@recipes_bp.route('/recipes/<int:product_id>/explosion', methods=['GET'])
+@permission_required(RECIPES_READ)
+def explosion(product_id):
+    medidas = _medidas(request.args.to_dict())
+    resultado = container.recipe_service().explode(
+        product_id, medidas.w, medidas.h,
+        opciones=_opciones(request.args.to_dict()), fecha=medidas.fecha, version=medidas.version,
+        referencia=medidas.referencia)
+    return jsonify(explosion_visible(resultado.model_dump()))
 
-        # 2. Captura de medidas desde la URL
-        try:
-            w_pedido = float(request.args.get('w', 100.0))
-            h_pedido = float(request.args.get('h', 100.0))
-        except ValueError:
-            return jsonify({"status": "error", "message": "Medidas inválidas"}), 400
 
-        for item in components:
-            # --- DATOS DEL INSUMO (Compatibilidad con Neon 'name') ---
-            insumo_obj = getattr(item, 'insumo', None)
-            nombre_visual = getattr(insumo_obj, 'name', None) or \
-                            getattr(item, 'nombre_producto', "Insumo sin nombre")
-            precio_unit_base = float(getattr(insumo_obj, 'precio_costo_unitario', 0) or 0)
+@recipes_bp.route('/recipes/<int:product_id>/quote', methods=['GET'])
+@permission_required(QUOTES_READ)
+def recipe_quote(product_id):
+    args = request.args.to_dict()
+    if 'markup_pct' in args:
+        raise ValidationFailed("El markup es fijo: 100%")
+    datos = parse_payload(CotizacionMedidasIn, args)
+    opciones = _opciones({k: v for k, v in args.items() if k != 'km_obra'})
+    resultado = container.recipe_service().quote_product(
+        product_id, datos.w, datos.h, datos.km_obra,
+        opciones=opciones,
+        fecha=datos.fecha, version=datos.version,
+        referencia=datos.referencia)
+    from services.saved_quotes import token_presupuesto
+    salida = resultado.model_dump(mode='json')
+    token = token_presupuesto(product_id, datos, opciones, salida)
+    visible = cotizacion_visible(salida)
+    visible['guardado_token'] = token
+    return jsonify(visible)
 
-            # --- CÁLCULO DE MEDIDAS CON DELTAS ---
-            d_w = float(item.delta_ancho_cm or 0)
-            d_h = float(item.delta_alto_cm or 0)
-            ancho_corte = w_pedido + d_w
-            alto_corte = h_pedido + d_h
-            
-            # Inicialización por defecto
-            metodo = "ROLLO"
-            id_pieza_usada = None
-            mensaje_opt = ""
-            consumo_final = alto_corte # Por defecto es lineal de alto
 
-            # --- 3. LÓGICA DE OPTIMIZACIÓN (Búsqueda de Retazos) ---
-            # Solo buscamos retazos si es tela (lineal_alto o superficie)
-            if item.tipo_calculo in ['lineal_alto', 'superficie']:
-                # Dentro del for item in components:
-            
-                print(f"--- DEBUG RETAZOS PARA: {nombre_visual} ---")
-                print(f"Buscando ID Insumo: {item.id_insumo}")
-                print(f"Medida Necesaria: {ancho_corte} x {alto_corte}")
+@recipes_bp.route('/quotes/saved', methods=['POST'])
+@permission_required(QUOTES_READ)
+def save_quote():
+    from services.saved_quotes import guardar_presupuesto
+    datos = parse_payload(GuardarPresupuestoIn, request.get_json(silent=True))
+    return jsonify(presupuesto_visible(guardar_presupuesto(datos.token))), 201
 
-                # Intentamos traer TODOS los retazos disponibles de ese insumo para ver qué hay
-                todos_disponibles = RetazoTela.query.filter_by(
-                    id_insumo_base=item.id_insumo, 
-                    estado='disponible'
-                ).all()
-                
-                print(f"Retazos encontrados en DB para este ID: {len(todos_disponibles)}")
-                for r in todos_disponibles:
-                    print(f" > Retazo ID {r.id}: {r.ancho_cm}x{r.largo_cm}")
-                try:
-                    
-                    print(f"DEBUG: Buscando retazo para Insumo {item.id_insumo} (Req: {ancho_corte}x{alto_corte})")
-                    
-                    retazo = RetazoTela.query.filter(
-                        RetazoTela.id_insumo_base == item.id_insumo,
-                        RetazoTela.estado == 'disponible',
-                        RetazoTela.ancho_cm >= ancho_corte,
-                        RetazoTela.largo_cm >= alto_corte
-                    ).order_by((RetazoTela.ancho_cm * RetazoTela.largo_cm).asc()).first()
 
-                    if retazo:
-                        print(f"  > ¡RETAZO ENCONTRADO! ID: {retazo.id}")
-                        metodo = "RETAZO"
-                        id_pieza_usada = retazo.id
-                        mensaje_opt = (f"Usar retazo de {int(retazo.ancho_cm)}x{int(retazo.largo_cm)} cm")
-                        consumo_final = 1.0 # En el frontend se muestra como 1 unidad de descarte
-                    else:
-                        print(f"  > No hay retazos suficientes. Usando ROLLO.")
-                        metodo = "ROLLO"
-                        consumo_final = alto_corte
-                except Exception as e_ret:
-                    print(f"  > Error en búsqueda de retazos: {str(e_ret)}")
-                    metodo = "ROLLO"
-                    consumo_final = alto_corte
-            
-            # --- 4. OTROS TIPOS DE CÁLCULO ---
-            elif item.tipo_calculo == 'lineal_ancho':
-                metodo = "BARRA"
-                consumo_final = ancho_corte
-            elif item.tipo_calculo == 'fijo':
-                metodo = "UNIDAD"
-                consumo_final = float(item.cantidad_base or 1.0)
+@recipes_bp.route('/quotes/saved', methods=['GET'])
+@permission_required(QUOTES_READ)
+def saved_quotes():
+    from services.saved_quotes import presupuestos_recientes
+    return jsonify([presupuesto_visible(p) for p in presupuestos_recientes()])
 
-            # --- 5. COSTEO FINAL ---
-            # Si es lineal (alto/ancho), trabajamos en cm para multiplicar por el precio unitario
-            if item.tipo_calculo in ['lineal_alto', 'lineal_ancho', 'superficie']:
-                costo_parcial = round((alto_corte if item.tipo_calculo != 'lineal_ancho' else ancho_corte) * precio_unit_base, 2)
-            else:
-                costo_parcial = round(consumo_final * precio_unit_base, 2)
 
-            # --- 6. MAPEO PARA CUTTINGCALCULATOR.TSX ---
-            resultado.append({
-                "componente": nombre_visual,
-                "consumo_cm": round(consumo_final, 2),
-                "medida_corte": f"{ancho_corte} x {alto_corte} cm",
-                "precio_unitario": precio_unit_base,
-                "costo_parcial": costo_parcial,
-                "metodo": metodo,
-                "id_retazo": id_pieza_usada, # Esta key activa el banner en React
-                "mensaje": mensaje_opt
-            })
+@recipes_bp.route('/quotes/calculate', methods=['POST'])
+@permission_required(QUOTES_READ)
+def calculate_quote():
+    datos = parse_payload(CotizacionIn, request.get_json(silent=True))
+    resultado = container.recipe_service().quote_by_id(
+        datos.receta_id, datos.ancho, datos.alto, datos.km_obra,
+        opciones=_opciones(datos.opciones), referencia=datos.referencia)
+    return jsonify({
+        'status': 'success', 'receta_id': datos.receta_id,
+        'medidas': {'ancho_cm': datos.ancho, 'alto_cm': datos.alto},
+        'resultado': cotizacion_visible(resultado.model_dump()),
+    })
 
-        # Sumatoria final
-        total = round(sum(i['costo_parcial'] for i in resultado), 2)
-        
-        return jsonify({
-            "status": "success", 
-            "explosion": resultado, 
-            "total_materiales": total
-        })
 
-    except Exception as e:
-        import traceback
-        print(f"--- ERROR CRÍTICO  ---\n{traceback.format_exc()}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    
-    
+@recipes_bp.route('/recipes/<int:product_id>/produce', methods=['POST'])
+@permission_required(RECIPES_PRODUCE)
+def produce(product_id):
+    cuerpo = request.get_json(silent=True) or {}
+    if "w" not in cuerpo or "h" not in cuerpo:
+        raise ValidationFailed("Indicá el ancho (w) y el alto (h) en cm")
+    medidas = _medidas(cuerpo)
+    opciones = cuerpo.get('opciones') if isinstance(cuerpo.get('opciones'), dict) else {}
+    resultado = container.recipe_service().produce(
+        product_id, medidas.w, medidas.h, _opciones(opciones), medidas.referencia)
+    return jsonify(produccion_visible(resultado.model_dump()))
+
+
 @recipes_bp.route('/recipes/<int:product_id>', methods=['GET'])
+@permission_required(RECIPES_READ)
 def get_recipe_base(product_id):
-    try:
-        # 1. Buscamos los componentes en la tabla RecipeBOM
-        components = RecipeBOM.query.filter_by(id_padre=product_id).all()
-        
-        if not components:
-            return jsonify({
-                "status": "error", 
-                "message": f"El producto {product_id} no tiene una receta definida en la base de datos."
-            }), 404
+    items = container.recipe_service().base_recipe(product_id)
+    return jsonify([i.model_dump() for i in items])
 
-        # 2. Mapeamos los datos para que el Frontend los reciba limpios
-        resultado = []
-        for item in components:
-            # Usamos getattr por seguridad, igual que en tu test_recipe
-            insumo_obj = getattr(item, 'insumo', None)
-            nombre = getattr(insumo_obj, 'name', None) or getattr(item, 'nombre_producto', "Insumo")
-            
-            resultado.append({
-                "id": item.id,
-                "componente": nombre,
-                "cantidad_base": float(item.cantidad_base or 0.0)
-            })
 
-        return jsonify(resultado), 200
+@recipes_bp.route('/recipes/calculation-types', methods=['GET'])
+@permission_required(RECIPES_READ)
+def calculation_types():
+    return jsonify(container.recipe_service().calculation_types())
 
-    except Exception as e:
-        import traceback
-        print(f"--- ERROR EN GET_RECIPE ---\n{traceback.format_exc()}")
-        return jsonify({"status": "error", "message": str(e)}), 500    
+
+@recipes_bp.route('/recipes/productions', methods=['GET'])
+@permission_required(RECIPES_READ)
+def production_history():
+    product_id = request.args.get('producto_id', type=int)
+    if request.args.get('producto_id') and product_id is None:
+        raise ValidationFailed("producto_id debe ser un entero")
+    limit = request.args.get('limit', default=100, type=int)
+    offset = request.args.get('offset', default=0, type=int)
+    referencia = request.args.get('referencia', type=str)
+    rows = container.recipe_service().production_history(product_id, referencia, limit, offset)
+    return jsonify([historial_produccion_visible(r.model_dump(mode='json')) for r in rows])
+
+
+@recipes_bp.route('/recipes/<int:product_id>/versions', methods=['GET'])
+@permission_required(RECIPES_READ)
+def list_versions(product_id):
+    return jsonify([v.model_dump(mode='json') for v in container.recipe_service().versions(product_id)])
+
+
+@recipes_bp.route('/recipes/<int:product_id>/versions', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def publish_version(product_id):
+    datos = parse_payload(RecipeVersionIn, request.get_json(silent=True))
+    version = container.recipe_service().publish_version(product_id, datos)
+    return jsonify(version.model_dump(mode='json')), 201
+
+
+@recipes_bp.route('/recipes/products', methods=['GET'])
+@permission_required(RECIPES_READ)
+def list_products():
+    return jsonify([p.model_dump() for p in container.recipe_service().products()])
+
+
+@recipes_bp.route('/recipes/products', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def create_product():
+    datos = parse_payload(ProductIn, request.get_json(silent=True))
+    return jsonify(container.recipe_service().create_product(datos).model_dump()), 201
+
+
+@recipes_bp.route('/recipes/<int:product_id>/detail', methods=['GET'])
+@permission_required(RECIPES_READ)
+def recipe_detail(product_id):
+    version = request.args.get('version', type=int)
+    items = container.recipe_service().version_detail(product_id, version)
+    return jsonify([i.model_dump() for i in items])
+
+
+@recipes_bp.route('/recipes/preview', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def preview():
+    datos = parse_payload(PreviewIn, request.get_json(silent=True))
+    datos.opciones = _opciones(datos.opciones)
+    return jsonify(container.recipe_service().preview(datos).model_dump())
+
+
+@recipes_bp.route('/recipes/<int:product_id>/duplicate', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def duplicate(product_id):
+    datos = parse_payload(DuplicateIn, request.get_json(silent=True))
+    producto, version = container.recipe_service().duplicate(product_id, datos)
+    return jsonify({'producto': producto.model_dump(), 'version': version.model_dump(mode='json')}), 201
+
+
+@recipes_bp.route('/recipes/import', methods=['POST'])
+@permission_required(RECIPES_WRITE)
+def import_recipes():
+    datos = parse_payload(ImportIn, request.get_json(silent=True))
+    return jsonify(container.recipe_service().import_csv(datos))
+
+
+@recipes_bp.route('/recipes/import/template', methods=['GET'])
+@permission_required(RECIPES_READ)
+def import_template():
+    return jsonify({'csv': recipe_import.plantilla()})

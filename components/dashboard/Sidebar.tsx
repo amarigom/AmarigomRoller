@@ -3,10 +3,12 @@
 import { useState } from "react" // Agregamos estado local para el móvil
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Package, Users, Calculator, ClipboardList, ChevronLeft, ChevronRight, Menu, X } from "lucide-react"
+import { Package, Users, Calculator, ClipboardList, ChevronLeft, ChevronRight, Menu, X, LogOut, UserCog, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { hasPermission, logout, type Session } from "@/lib/api"
 
 interface SidebarProps {
+  session: Session | null
   collapsed: boolean
   onToggleCollapse: () => void
   stats: {
@@ -17,13 +19,15 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { href: "/gestion/inventario", label: "Inventario", icon: Package },
-  { href: "/gestion/clientes", label: "Clientes", icon: Users },
-  { href: "/gestion/calculadora", label: "Calculadora de Corte", icon: Calculator },
-  { href: "/gestion/ordenes", label: "Ordenes", icon: ClipboardList },
+  { href: "/gestion/inventario", label: "Inventario", icon: Package, permission: "inventory:read" },
+  { href: "/gestion/clientes", label: "Clientes", icon: Users, permission: "clients:read" },
+  { href: "/gestion/calculadora", label: "Calculadora de Corte", icon: Calculator, permission: "recipes:read" },
+  { href: "/gestion/recetas", label: "Recetas", icon: BookOpen, permission: "recipes:write" },
+  { href: "/gestion/ordenes", label: "Ordenes", icon: ClipboardList, permission: "inventory:read" },
+  { href: "/gestion/usuarios", label: "Usuarios", icon: UserCog, permission: "users:manage" },
 ]
 
-export default function Sidebar({ collapsed, onToggleCollapse, stats }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggleCollapse, stats, session }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false) // Estado para el menú en celular
 
@@ -79,7 +83,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, stats }: SidebarP
 
         {/* Navegación */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {NAV_ITEMS.filter((item) => hasPermission(session, item.permission)).map(({ href, label, icon: Icon }) => {
             const isActive = pathname === href
             return (
               <Link
@@ -115,6 +119,22 @@ export default function Sidebar({ collapsed, onToggleCollapse, stats }: SidebarP
             </div>
           </div>
         )}
+
+        {/* Usuario y cierre de sesión */}
+        <div className="px-3 py-3 border-t border-[#2a2520]">
+          {session && (!collapsed || mobileOpen) && (
+            <p className="px-3 pb-2 text-xs text-[#6b6560] truncate">
+              {session.user.nombre} · {session.user.rol}
+            </p>
+          )}
+          <button
+            onClick={logout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-[#a0998c] hover:bg-[#1a1a1a] hover:text-[#f5f0e8]"
+          >
+            <LogOut size={18} className="flex-shrink-0" />
+            {(!collapsed || mobileOpen) && <span>Cerrar sesión</span>}
+          </button>
+        </div>
 
         {/* Botón de Colapsar (Oculto en móvil, no tiene sentido ahí) */}
         <button

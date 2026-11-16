@@ -1,29 +1,27 @@
-from database import db
+from extensions import db
+
 
 class Supply(db.Model):
     __tablename__ = 'insumos'
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = (
+        db.Index('ix_insumos_categoria_id', 'categoria_id'),
+        {'extend_existing': True},
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     categoria_id = db.Column(db.Integer, db.ForeignKey('categorias_insumos.id'), nullable=False)
-    
+
     codigo_sku = db.Column(db.String(50), unique=True)
     name = db.Column(db.String(255), nullable=False)
     unidad_medida = db.Column(db.String(20))
     precio_costo_unitario = db.Column(db.Numeric(12, 4))
     stock_actual = db.Column(db.Numeric(12, 4))
+    stock_minimo = db.Column(db.Numeric(12, 4), nullable=False, default=0, server_default='0')
+    activo = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
     ancho_cm = db.Column(db.Numeric(10, 2))
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "code": self.codigo_sku,
-            "name": self.name,
-            # Esto busca el nombre de la categoría automáticamente
-            "category": self.category.name if self.category else "Sin Categoría",
-            "metersLeft": float(self.stock_actual or 0),
-            "widthCm": float(self.ancho_cm or 0),
-            "unit": self.unidad_medida,
-            "price": float(self.precio_costo_unitario or 0),
-            "totalMeters": float(self.stock_actual or 0)
-        }
+    # Largo de la pieza que se compra (perfil de 200/400/600 cm, rollo de cinta de 5000 cm)
+    largo_pieza_cm = db.Column(db.Numeric(10, 2))
+    es_tela = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    precio_m2 = db.Column(db.Numeric(12, 4))
+    unidad_compra = db.Column(db.String(20))
+    factor_conversion = db.Column(db.Numeric(12, 4))

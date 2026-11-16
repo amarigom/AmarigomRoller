@@ -1,0 +1,38 @@
+{
+  "descripcion": "Casos reales de cálculo. Si un cambio en estrategias, fórmulas o unidades altera un total, el test falla y avisa cuál. Para actualizar un valor esperado hay que revisarlo a mano.",
+  "insumos": {
+    "tela":      {"name": "Tela blackout", "unidad_medida": "metro", "precio_costo_unitario": 24000, "ancho_cm": 300, "es_tela": true, "stock_actual": 50},
+    "tubo":      {"name": "Tubo 32 mm x 4 m", "unidad_medida": "cm", "precio_costo_unitario": 12, "stock_actual": 4000, "largo_pieza_cm": 400},
+    "zocalo":    {"name": "Zócalo CP1 x 4 m", "unidad_medida": "cm", "precio_costo_unitario": 9, "stock_actual": 4000, "largo_pieza_cm": 400},
+    "cinta":     {"name": "Cinta doble faz 50 m", "unidad_medida": "rollo", "precio_costo_unitario": 5000, "stock_actual": 10, "largo_pieza_cm": 5000},
+    "espagueti": {"name": "Espagueti", "unidad_medida": "metro", "precio_costo_unitario": 300, "stock_actual": 100},
+    "soporte":   {"name": "Soporte central", "unidad_medida": "unidad", "precio_costo_unitario": 1500, "stock_actual": 30},
+    "cadena":    {"name": "Cadena", "unidad_medida": "metro", "precio_costo_unitario": 800, "stock_actual": 60}
+  },
+  "productos": {
+    "1": [
+      {"insumo": "tela", "nombre": "Tela", "tipo_calculo": "lineal_alto", "delta_ancho_cm": -2, "delta_alto_cm": 30, "merma_pct": 5},
+      {"insumo": "tubo", "nombre": "Tubo", "tipo_calculo": "perfil", "delta_ancho_cm": -1.5},
+      {"insumo": "zocalo", "nombre": "Zócalo", "tipo_calculo": "perfil", "delta_ancho_cm": -1.5},
+      {"insumo": "cinta", "nombre": "Cinta", "tipo_calculo": "lineal_ancho", "delta_ancho_cm": -1.5},
+      {"insumo": "espagueti", "nombre": "Espagueti", "tipo_calculo": "lineal_ancho", "delta_ancho_cm": 1},
+      {"insumo": "soporte", "nombre": "Soporte central", "tipo_calculo": "fijo", "condicion": "ancho > 200"},
+      {"insumo": "cadena", "nombre": "Cadena", "tipo_calculo": "lineal_alto", "condicion": "sistema == 'cadena'"},
+      {"nombre": "Armado", "tipo_calculo": "mano_obra", "minutos_mano_obra": 30}
+    ]
+  },
+  "casos": [
+    {"nombre": "roller blackout 150x200, sin opciones", "producto": 1, "w": 150, "h": 200, "opciones": {},
+     "total_materiales": 61880.0,
+     "componentes": {"Tela blackout": 57960.0, "Tubo 32 mm x 4 m": 1782.0, "Zócalo CP1 x 4 m": 1336.5,
+                     "Cinta doble faz 50 m": 148.5, "Espagueti": 453.0, "Armado": 0.0, "Etiqueta": 200.0}},
+    {"nombre": "roller blackout 150x200, sistema cadena", "producto": 1, "w": 150, "h": 200, "opciones": {"sistema": "cadena"},
+     "total_materiales": 63480.0,
+     "componentes": {"Tela blackout": 57960.0, "Tubo 32 mm x 4 m": 1782.0, "Zócalo CP1 x 4 m": 1336.5,
+                     "Cinta doble faz 50 m": 148.5, "Espagueti": 453.0, "Cadena": 1600.0, "Armado": 0.0, "Etiqueta": 200.0}},
+    {"nombre": "roller blackout 250x220, lleva soporte central", "producto": 1, "w": 250, "h": 220, "opciones": {"sistema": "motor"},
+     "total_materiales": 70920.0,
+     "componentes": {"Tela blackout": 63000.0, "Tubo 32 mm x 4 m": 2982.0, "Zócalo CP1 x 4 m": 2236.5,
+                     "Cinta doble faz 50 m": 248.5, "Espagueti": 753.0, "Soporte central": 1500.0, "Armado": 0.0, "Etiqueta": 200.0}}
+  ]
+}
